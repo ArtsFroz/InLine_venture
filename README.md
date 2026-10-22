@@ -64,6 +64,16 @@ Other scripts:
 On a laptop the app is shown centered inside a phone-sized frame (390×844), scaled down automatically if the
 window is short. On a phone it fills the screen.
 
+## Publishing online (Netlify)
+
+Live demo: <https://inlineventure.netlify.app>
+
+- **Netlify Drop:** run `npm run build`, then drag the whole `dist` folder onto the project's **Deploys** page.
+  `dist/_redirects` (copied from `public/_redirects`) makes every route such as `/tempat/kopi-tepi` work on
+  refresh or when opened from a shared link.
+- **Auto-deploy from GitHub:** connect the Netlify project to this repo; `netlify.toml` sets the build command,
+  the `dist` publish folder and Node 22.
+
 ## Demo controls (for the presenter)
 
 A hidden panel lets you recover quickly during the presentation.
