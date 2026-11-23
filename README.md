@@ -42,8 +42,8 @@ Requirements: Node.js 20 or newer (tested with Node 22) and npm.
 npm install
 ```
 
-Copy `.env.example` to `.env.local` and fill it in. Add the same variables in Netlify → Site configuration →
-Environment variables for the live site.
+Copy `.env.example` to `.env.local` and fill it in. The live build reads the public `VITE_*` values from
+`.env.production` (committed); add `GEMINI_API_KEY` in Netlify → Site configuration → Environment variables.
 
 | Variable | Purpose |
 | --- | --- |
