@@ -1,2 +1,6 @@
+# Firebase sign-in handler on the app's own domain (src/lib/firebase.ts). Must stay above the SPA rule.
+/__/auth/*      https://inline-binus.firebaseapp.com/__/auth/:splat      200
+/__/firebase/*  https://inline-binus.firebaseapp.com/__/firebase/:splat  200
+
 # Single-page app: every route is handled by index.html
 /*    /index.html    200

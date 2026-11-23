@@ -5,9 +5,14 @@ import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { getAuth, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore'
 
+const firebaseAuthDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined
+
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string | undefined,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined,
+  // The sign-in handler (/__/auth/*) is proxied through the app's own host (vite.config.ts in dev/preview,
+  // public/_redirects on Netlify). Same-origin keeps the redirect sign-in working in browsers that block
+  // third-party storage (Safari, Chrome), where a firebaseapp.com handler loses the result.
+  authDomain: firebaseAuthDomain && typeof window !== 'undefined' ? window.location.host : firebaseAuthDomain,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined,
   appId: import.meta.env.VITE_FIREBASE_APP_ID as string | undefined,
 }
