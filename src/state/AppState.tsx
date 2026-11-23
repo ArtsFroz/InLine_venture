@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { BUDDIES } from '../data/buddies'
 import { DEFAULT_MEETING_POINT, defaultSpot } from '../data/campus'
-import { getPlace } from '../data/places'
+import { COMMUNITY_ID_PREFIX, allPlaces, getPlace, subscribePlaces } from '../data/places'
 import { BUDDY_EARN_JOKI, BUDDY_EARN_TITIP, DEMO_STEP_MS, MAX_ORDERS_PER_BUDDY, buildFees } from '../data/pricing'
 import { lastAutoStep, lastStep } from '../lib/orderSteps'
 import type {
@@ -28,7 +28,7 @@ const MAX_NEW_REQUESTS = 2
 const MIN_PER_PERSON = 3
 
 const SEED_QUEUE: ActiveQueue = {
-  placeId: 'kopi-tepi',
+  placeId: 'bicasa-coffee',
   number: 'A028',
   serving: 'A024',
   ahead: 3,
@@ -42,9 +42,9 @@ const SEED_REQUESTS: readonly BuddyRequest[] = [
   {
     id: 'req-seed-1',
     type: 'titip',
-    placeId: 'kopi-tepi',
-    title: 'Kopi Tepi → Anggrek lobby lt. 1',
-    detail: '2 item · Es Kopi Susu, Croissant Cokelat',
+    placeId: 'bicasa-coffee',
+    title: 'BICASA Coffee → Anggrek lobby lt. 1',
+    detail: '2 item · Kopi Susu BICASA, Caffe Latte',
     earn: BUDDY_EARN_TITIP,
     etaMin: 15,
     status: 'baru',
@@ -52,9 +52,9 @@ const SEED_REQUESTS: readonly BuddyRequest[] = [
   {
     id: 'req-seed-2',
     type: 'joki',
-    placeId: 'kedai-senja',
-    title: 'Kedai Senja · antre untuk 1 orang',
-    detail: 'Titik temu: Syahdan, lobby utama',
+    placeId: 'bakmi-effata',
+    title: 'Bakmi Effata · antre untuk 1 orang',
+    detail: 'Titik temu: Anggrek, FOODPARK Basement',
     earn: BUDDY_EARN_JOKI,
     etaMin: 25,
     status: 'baru',
@@ -65,17 +65,17 @@ type RequestTemplate = Omit<BuddyRequest, 'id' | 'status'>
 
 /** Fictional incoming orders that keep the Mode Buddy demo from running empty. */
 const REQUEST_POOL: readonly RequestTemplate[] = [
-  { type: 'titip', placeId: 'kopi-kaca', title: 'Kopi Kaca → Anggrek ruang kelas 712', detail: '1 item · Caffe Latte', earn: BUDDY_EARN_TITIP, etaMin: 12 },
-  { type: 'joki', placeId: 'dapur-mahasiswa', title: 'Dapur Mahasiswa · antre untuk 1 orang', detail: 'Titik temu: Binus Square, food court', earn: BUDDY_EARN_JOKI, etaMin: 20 },
-  { type: 'titip', placeId: 'roti-sudut', title: 'Roti Sudut → Binus Square ruang belajar bersama', detail: '2 item · Croissant Cokelat, Roti Sosis', earn: BUDDY_EARN_TITIP, etaMin: 15 },
-  { type: 'joki', placeId: 'seduh-studio', title: 'Seduh Studio · antre untuk 1 orang', detail: 'Titik temu: Syahdan, lobby utama', earn: BUDDY_EARN_JOKI, etaMin: 18 },
-  { type: 'titip', placeId: 'teras-teh', title: 'Teras Teh → Syahdan perpustakaan', detail: '2 item · Es Teh Leci, Teh Susu Boba', earn: BUDDY_EARN_TITIP, etaMin: 14 },
+  { type: 'titip', placeId: 'charmony', title: 'Charmony Fresh Milk Tea → Anggrek ruang kelas 712', detail: '1 item · Matcha Milk Tea', earn: BUDDY_EARN_TITIP, etaMin: 12 },
+  { type: 'joki', placeId: 'chicken-oriental', title: 'Chicken Oriental · antre untuk 1 orang', detail: 'Titik temu: Anggrek, FOODPARK Basement', earn: BUDDY_EARN_JOKI, etaMin: 20 },
+  { type: 'titip', placeId: 'hokben', title: 'HokBen → Anggrek perpustakaan', detail: '2 item · Bento Chicken Teriyaki, Ocha', earn: BUDDY_EARN_TITIP, etaMin: 15 },
+  { type: 'joki', placeId: 'nasi-ayam-hainan', title: 'Nasi Ayam Hainan · antre untuk 1 orang', detail: 'Titik temu: Anggrek, Kantin Outdoor', earn: BUDDY_EARN_JOKI, etaMin: 18 },
+  { type: 'titip', placeId: 'kantin-binus-square', title: 'Kantin Binus Square → Binus Square ruang belajar bersama', detail: '2 item · Nasi Goreng, Es Teh Manis', earn: BUDDY_EARN_TITIP, etaMin: 14 },
 ]
 
 /** Fresh seed state (also what resetDemo() restores). */
 export function createSeedState(): AppState {
   return {
-    savedPlaceIds: ['kopi-tepi', 'kopi-kaca'],
+    savedPlaceIds: ['bicasa-coffee', 'bakmi-effata'],
     activeQueue: { ...SEED_QUEUE },
     orders: [],
     buddy: {
@@ -138,7 +138,7 @@ function queueNumber(letter: string, n: number): string {
 }
 
 function buildQueue(place: Place, now: Date): ActiveQueue {
-  // Kopi Tepi reproduces the Figma numbers (4 · Antrean Saya).
+  // The seed place reproduces the Figma numbers (4 · Antrean Saya).
   if (place.id === SEED_QUEUE.placeId) return { ...SEED_QUEUE }
   const letter = QUEUE_LETTER[place.category]
   const charSum = [...place.id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
@@ -198,16 +198,16 @@ function buildOrder(state: AppState, input: CreateOrderInput, id: string, create
 }
 
 function demoOrderInput(type: OrderType): CreateOrderInput {
-  if (type === 'joki') return { type, placeId: 'kopi-tepi', queueNumber: SEED_QUEUE.number, meetingPoint: DEFAULT_MEETING_POINT }
-  const place = getPlace('kopi-tepi')
+  if (type === 'joki') return { type, placeId: SEED_QUEUE.placeId, queueNumber: SEED_QUEUE.number, meetingPoint: DEFAULT_MEETING_POINT }
+  const place = getPlace(SEED_QUEUE.placeId)
   const pick = (name: string): OrderLine[] => {
     const item = place?.menu.find((m) => m.name === name)
     return item ? [{ menuId: item.id, name: item.name, price: item.price, qty: 1 }] : []
   }
   return {
     type,
-    placeId: 'kopi-tepi',
-    items: [...pick('Es Kopi Susu'), ...pick('Croissant Cokelat')],
+    placeId: SEED_QUEUE.placeId,
+    items: [...pick('Kopi Susu BICASA'), ...pick('Caffe Latte')],
     deliverTo: { campus: 'Anggrek', detail: 'Lobby lt. 1' },
   }
 }
@@ -361,12 +361,14 @@ function loadState(): AppState {
     if (!raw) return createSeedState()
     const parsed: unknown = JSON.parse(raw)
     if (!isValidAppState(parsed)) return createSeedState()
-    // Drop anything that points at a place that no longer exists.
+    // Drop anything that points at a place that no longer exists. Student places are kept: they
+    // arrive from Firestore after this runs.
+    const known = (id: string) => id.startsWith(COMMUNITY_ID_PREFIX) || getPlace(id) !== undefined
     return {
       ...parsed,
-      savedPlaceIds: parsed.savedPlaceIds.filter((id) => getPlace(id) !== undefined),
-      activeQueue: parsed.activeQueue && getPlace(parsed.activeQueue.placeId) ? parsed.activeQueue : null,
-      orders: parsed.orders.filter((order) => getPlace(order.placeId) !== undefined),
+      savedPlaceIds: parsed.savedPlaceIds.filter(known),
+      activeQueue: parsed.activeQueue && known(parsed.activeQueue.placeId) ? parsed.activeQueue : null,
+      orders: parsed.orders.filter((order) => known(order.placeId)),
     }
   } catch {
     // Storage blocked (private mode) or corrupted JSON: the demo runs from the seed.
@@ -406,7 +408,7 @@ export interface AppActions {
   completeRequest(id: string): void
   setDemoAutoAdvance(on: boolean): void
   resetDemo(): void
-  /** Creates an already-paid Kopi Tepi order at `step` (last step = finished). For the demo controls. */
+  /** Creates an already-paid BICASA Coffee order at `step` (last step = finished). For the demo controls. */
   seedDemoOrder(type: OrderType, step: number): Order
 }
 
@@ -538,8 +540,14 @@ export function useAppState(): AppStateContextValue {
   return ctx
 }
 
+/** Every place, re-rendering when approved student places arrive. */
+export function usePlaces(): readonly Place[] {
+  return useSyncExternalStore(subscribePlaces, allPlaces)
+}
+
 export function usePlace(id: string | undefined): Place | undefined {
-  return useMemo(() => (id ? getPlace(id) : undefined), [id])
+  const places = usePlaces()
+  return useMemo(() => (id ? places.find((place) => place.id === id) : undefined), [places, id])
 }
 
 export function useOrder(id: string | undefined): Order | undefined {

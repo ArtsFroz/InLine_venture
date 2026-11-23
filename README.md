@@ -11,11 +11,24 @@ The app is an installable mobile web app (PWA).
 
 ## Features
 
+- **BINUS places** (`src/data/places.ts`): the real tenants of Kampus Anggrek by area: FOODPARK Basement (BICASA
+  Coffee, Rasa Sayange, Cerita Cinta, Chicken Oriental, Good Waffle, Rasela, Bakmi Effata, Yoshinoya), Kantin
+  Outdoor (Nasi Ayam Hainan, Jus Buah), Lantai 1 (Starbucks, A&W, Charmony Fresh Milk Tea, Yoshinoya, HokBen) and
+  Kantin Lantai 5 (snacks, cold drinks, coffee), plus one canteen each for Syahdan, Kijang and Binus Square. Menus, prices, opening hours and
+  walking distances are estimates (the app says so on every detail page) until they are checked on site.
+- **Usulkan tempat** (`/usulkan`, `src/lib/placeSuggestions.ts`): any signed-in student with a verified email can
+  suggest a missing place, inside campus or around it: name, type, campus and area (or walking distance), a
+  landmark, opening hours and 1–3 menu items with prices. The form points out places that already exist. An
+  admin checks each suggestion at `/admin`; approved places appear for everyone with the label "Usulan
+  mahasiswa" and get a crowd prediction like any other place. Only the submitter's uid is stored, no photos, and
+  each account has at most 5 suggestions (enforced by `firestore.rules`).
 - **Crowd prediction** (`src/lib/crowdModel.ts`): each place shows Sepi / Sedang / Ramai / Penuh, an hourly chart
   and the best time to come. The estimate follows the BINUS class schedule: spikes at every 20-minute break, the
   lunch peak (11.00–14.00), students with a free session waiting between classes, quiet afternoons, busier
-  Tue–Thu, the Friday-prayer dip and quiet Saturdays. Open/closed comes from each place's opening hours. The
-  constants are assumptions that will be calibrated with field observation.
+  Tue–Thu, the Friday-prayer dip and quiet Saturdays. Each Anggrek area behaves differently: FOODPARK Basement
+  is the first choice for lunch, Kantin Outdoor takes the overflow when the Basement is full, the Lantai 1 chains
+  stay lower, and Lantai 5 jumps at every break. Open/closed comes from each place's opening hours. The constants
+  are assumptions that will be calibrated with field observation.
 - **AI Rekomendasi chat** (`/chat`): students describe what they want in casual Indonesian ("laper, kelas 30 menit
   lagi, budget 20 ribu"). Google Gemini turns the message into filters, picks up to 3 places and writes a short
   reply, asks one question back when the message is too vague, and suggests follow-ups. Each message sends the
@@ -82,8 +95,8 @@ npm run preview
 | Script | What it does |
 | --- | --- |
 | `npm run typecheck` | Type-check only |
+| `npm test` | Unit tests (Vitest): crowd model per area, place suggestion checks |
 | `npm run icons` | Regenerate the PWA icons from `public/icon.svg` |
-| `npm run photos` | Re-encode the photos in `docs/figma/raw/` to `public/images/places/*.webp` |
 
 ## Deploying (Netlify)
 
@@ -102,7 +115,7 @@ full-screen like an app. On a laptop the app is shown centered in a phone-sized 
 A hidden panel helps during presentations and exhibitions: press **Shift + D** on a laptop, or long-press the
 InLine logo on Home (about 0.7 s).
 
-- **Waktu prediksi keramaian:** set a day and time (e.g. Selasa 12.55) to show the crowd pattern outside class
+- **Waktu prediksi keramaian:** set a day and time (e.g. Selasa 13.05) to show the crowd pattern outside class
   hours, or return to the real clock.
 - **Reset data:** restores the starting orders, queue and saved places.
 - **Lacak otomatis maju / Majukan langkah pelacakan:** control how order tracking advances.
@@ -115,7 +128,8 @@ InLine logo on Home (about 0.7 s).
 | Login, signup, email verification, buddy verification and admin review | Live (Firebase Auth + Firestore) |
 | AI chat and AI search | Live (Gemini via Netlify Function), keyword fallback |
 | Crowd prediction | Live, schedule-based model; calibration with field data is next |
-| Place list and menus | Being updated to the actual BINUS canteen tenants |
+| Place list | Real BINUS Anggrek tenants; menus, prices and hours are estimates to be checked on site |
+| Student place suggestions | Live (Firestore), reviewed by admins |
 | Orders, payment (QRIS), order tracking, Mode Buddy incoming orders | Run in the app on the device; server-side orders and a licensed payment gateway (escrow) are next |
 
 ## Project structure
@@ -128,14 +142,15 @@ src/
   components/        Design system: Button, Card, Chip, BottomNav, Header, BottomSheet, StepTracker,
                      QueueChart, PhoneFrame, Screen, Toast, presenter controls, …
   screens/           One file per screen (Auth, Home, Results, Chat, PlaceDetail, Queue, Joki, Titip,
-                     Payment, Track, OrderDone, Saved, Profile, BuddyApply, BuddyMode, AdminReview)
+                     Payment, Track, OrderDone, Saved, Profile, BuddyApply, BuddyMode, AdminReview, SuggestPlace)
   data/              Places, menus, buddies, campus spots, prices
   state/             Auth, buddy verification hooks, app state (React context + reducer)
-  lib/               Crowd model, AI client and keyword parser, Firebase, buddy applications, formatting
+  lib/               Crowd model, AI client and keyword parser, Firebase, buddy applications, place
+                     suggestions, formatting
 netlify/
   functions/         ai-search (Gemini)
   lib/               AI prompt and grounding checks
-public/              Place photos, PWA icons, _redirects
+public/              PWA icons, _redirects
 docs/                Setup guide (SETUP-LOGIN.md), design reference
 firestore.rules      Firestore security rules
 ```

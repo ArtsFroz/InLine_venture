@@ -13,7 +13,7 @@ import type { Place } from '../state/types'
 import { crowdShortLabel } from '../lib/crowd'
 import { getNow, hhmm } from '../lib/clock'
 import { opensAtMinute, placeCrowd } from '../lib/crowdModel'
-import { crowdDetail, ratingDistance } from './parts/placeText'
+import { areaDistance, crowdDetail } from './parts/placeText'
 import { usePlaceCrowd } from './parts/usePlaceCrowd'
 
 const MAX_CARDS = 3
@@ -337,12 +337,12 @@ function PlaceRow({ place }: { place: Place }) {
       className="flex items-center gap-2.5 rounded-[12px] border border-line p-2 transition-colors hover:bg-soft focus-visible:ring-[3px] focus-visible:ring-primary/40 focus-visible:outline-none"
     >
       <span className="block size-12 shrink-0">
-        <PlaceImage src={place.image} alt="" width={48} height={48} fill rounded="rounded-[10px]" />
+        <PlaceImage category={place.category} alt="" width={48} height={48} fill rounded="rounded-[10px]" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[14px] font-bold">{place.name}</span>
         <span className="block truncate text-[12px] text-muted">
-          {ratingDistance(place)} · {place.campus}
+          {areaDistance(place)}
         </span>
       </span>
       {crowd.closed ? <Tag tone="gray">Tutup</Tag> : <CrowdBadge level={crowd.level} detail={crowdDetail(crowd)} />}

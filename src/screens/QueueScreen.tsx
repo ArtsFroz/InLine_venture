@@ -9,7 +9,7 @@ import { CancelQueueSheet } from './queue/CancelQueueSheet'
 import { QueueNumberCard, QueueSuccessBanner, QueueTimelineCard } from './queue/QueueCards'
 import { EmptyState } from './parts/ui'
 
-const DEMO_QUEUE_PLACE_ID = 'kopi-tepi'
+const DEMO_QUEUE_PLACE_ID = 'bicasa-coffee'
 
 /** 4 · Antrean Saya (+ 4b cancel sheet; `?batal=1` opens it on load for the demo). */
 export function QueueScreen() {
@@ -59,7 +59,7 @@ export function QueueScreen() {
                 Cari tempat
               </Button>
               <Button variant="outline" fullWidth onClick={takeDemoQueue}>
-                Ambil antrean di Kopi Tepi
+                Ambil antrean di BICASA Coffee
               </Button>
             </div>
           }

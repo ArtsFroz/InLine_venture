@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowUpDown, Sparkles } from 'lucide-react'
 import { InfoNote, Screen } from '../components'
 import {
@@ -12,6 +12,7 @@ import {
   searchPlaces,
   type ResultsSearchInput,
 } from '../lib/aiSearch'
+import { usePlaces } from '../state/AppState'
 import { ROUTES } from '../routes'
 import { ResultCard, ResultCardSkeleton } from './results/ResultCard'
 import { FilterSheet, SortSheet } from './results/ResultsSheets'
@@ -32,7 +33,8 @@ export function ResultsScreen() {
     () => applyFilters(ai.parsed ?? parseQuery(q), filters, category),
     [ai.parsed, q, filters, category],
   )
-  const { results, relaxed, dropped } = useMemo(() => searchPlaces(parsed, sort), [parsed, sort])
+  const places = usePlaces()
+  const { results, relaxed, dropped } = useMemo(() => searchPlaces(parsed, sort, places), [parsed, sort, places])
 
   // Chips-only searches have no sentence for the AI; keep the short "menganalisis" beat for them.
   const chipKey = `|${filters.join(',')}|${category ?? ''}`
@@ -116,6 +118,12 @@ export function ResultsScreen() {
 
       <p className="mt-3.5 text-[12px] leading-[15px] text-muted">
         Label keramaian adalah perkiraan dari jadwal sesi kelas BINUS (jeda kelas, jam makan siang, jam kosong).
+      </p>
+      <p className="mt-2 text-[12.5px] leading-[1.4] text-ink">
+        Tempat yang kamu cari belum ada?{' '}
+        <Link to={ROUTES.suggest} className="font-bold text-primary-dark underline underline-offset-2">
+          Usulkan tempat
+        </Link>
       </p>
 
       <FilterSheet

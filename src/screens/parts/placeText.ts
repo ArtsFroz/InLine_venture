@@ -1,11 +1,26 @@
 // Display strings derived from a Place, shared by several screens.
-import type { Place } from '../../state/types'
+import type { Area, Place } from '../../state/types'
 import type { PlaceCrowd } from '../../lib/crowdModel'
 import { formatDistance } from '../../lib/format'
 
-/** "4.8 · 300 m" */
-export function ratingDistance(place: Place): string {
-  return `${place.rating.toFixed(1)} · ${formatDistance(place.distanceM)}`
+const AREA_LABEL: Readonly<Record<Area, string>> = {
+  Basement: 'FOODPARK Basement',
+  Outdoor: 'Kantin Outdoor',
+  'Lantai 1': 'Lantai 1',
+  'Lantai 5': 'Lantai 5',
+  Kampus: 'Kampus',
+  'Sekitar kampus': 'Sekitar',
+}
+
+/** "FOODPARK Basement", "Kampus Syahdan", "Sekitar Anggrek". */
+export function areaLabel(place: Place): string {
+  const label = AREA_LABEL[place.area]
+  return place.area === 'Kampus' || place.area === 'Sekitar kampus' ? `${label} ${place.campus}` : label
+}
+
+/** "FOODPARK Basement · 60 m" */
+export function areaDistance(place: Place): string {
+  return `${areaLabel(place)} · ${formatDistance(place.distanceM)}`
 }
 
 /** "tutup" suffix for the crowd pill of a closed place. */

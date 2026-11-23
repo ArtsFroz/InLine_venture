@@ -9,10 +9,15 @@ import { ROUTES } from '../routes'
 import { QueuePredictionCard } from './detail/QueuePredictionCard'
 import { NotFoundScreen } from './parts/ui'
 import { useGoBack } from './parts/useGoBack'
-import { opensAt } from './parts/placeText'
+import { areaLabel, opensAt } from './parts/placeText'
 import { usePlaceCrowd } from './parts/usePlaceCrowd'
 import { useNow } from '../lib/clock'
 import { isOpenAt } from '../lib/crowdModel'
+
+const SOURCE_NOTE: Readonly<Record<Place['source'], string>> = {
+  tim: 'Menu, harga, dan jam buka masih perkiraan tim InLine.',
+  mahasiswa: 'Diusulkan mahasiswa dan disetujui admin InLine. Menu dan harga dari pengusul.',
+}
 
 interface DetailFooterProps {
   place: Place
@@ -48,7 +53,7 @@ export function PlaceDetailScreen() {
   const now = useNow()
 
   if (!place) {
-    return <NotFoundScreen title="Tempat tidak ditemukan" message="Tempat ini tidak ada di data demo. Coba cari lagi dari Home." />
+    return <NotFoundScreen title="Tempat tidak ditemukan" message="Tempat ini tidak ada di InLine. Coba cari lagi dari Home." />
   }
 
   const saved = state.savedPlaceIds.includes(place.id)
@@ -57,12 +62,12 @@ export function PlaceDetailScreen() {
     showToast(saved ? 'Dihapus dari Disimpan' : 'Disimpan')
   }
 
-  const meta = `${place.rating.toFixed(1)} (${place.reviews} ulasan) · ${place.type} · ${formatDistance(place.distanceM)} · ${formatPriceRange(place.priceMin, place.priceMax)}`
+  const meta = `${place.type} · ${areaLabel(place)} · ${formatDistance(place.distanceM)} · ${formatPriceRange(place.priceMin, place.priceMax)}`
 
   return (
     <Screen bleed footer={<DetailFooter place={place} />} footerStyle="bar">
       <div className="relative h-[200px] w-full">
-        <PlaceImage src={place.image} alt={`Foto ${place.name}`} width={390} height={200} eager fill rounded="" />
+        <PlaceImage category={place.category} alt={place.category} width={390} height={200} fill rounded="" />
         <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4">
           <IconButton icon={<ChevronLeft size={22} strokeWidth={2.2} aria-hidden />} label="Kembali" onClick={goBack} />
           <IconButton
@@ -98,6 +103,8 @@ export function PlaceDetailScreen() {
             </li>
           ))}
         </ul>
+        {place.locationNote && <p className="mt-2.5 text-[13.5px] leading-[1.4] text-ink">Patokan: {place.locationNote}</p>}
+        <p className="mt-2.5 text-[12.5px] leading-[1.4] text-muted">{SOURCE_NOTE[place.source]}</p>
         {place.promo && <PromoBanner text={place.promo} className="mt-2.5" />}
         <div className="mt-2.5">
           <QueuePredictionCard place={place} />

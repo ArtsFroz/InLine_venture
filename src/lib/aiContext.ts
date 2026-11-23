@@ -1,11 +1,13 @@
 // What the AI chat may know: the current (or demo) time and every place as the app shows it right
 // now. Public place data only; nothing about the user.
-import { PLACES } from '../data/places'
+import { allPlaces } from '../data/places'
 import { DAY_NAMES, hhmm, type Now } from './clock'
 import { crowdShortLabel } from './crowd'
 import { placeCrowd } from './crowdModel'
 
 const MAX_FACILITIES = 8
+/** The AI function accepts at most 80 places (netlify/lib/grounding.ts). */
+const MAX_PLACES = 80
 
 export interface ChatPlaceRow {
   id: string
@@ -13,7 +15,7 @@ export interface ChatPlaceRow {
   category: string
   campus: string
   distanceM: number
-  rating: number
+  area: string
   hours: string
   status: string
   priceMin: number
@@ -30,7 +32,7 @@ export interface ChatContext {
 export function chatContext(now: Now): ChatContext {
   return {
     now: `${DAY_NAMES[now.day]} ${hhmm(now.minute)}`,
-    places: PLACES.map((place) => {
+    places: allPlaces().slice(0, MAX_PLACES).map((place) => {
       const crowd = placeCrowd(place, now.day, now.minute)
       return {
         id: place.id,
@@ -38,7 +40,7 @@ export function chatContext(now: Now): ChatContext {
         category: place.category,
         campus: place.campus,
         distanceM: place.distanceM,
-        rating: place.rating,
+        area: place.area,
         hours: place.openHours,
         status: crowd.closed ? 'Tutup' : crowdShortLabel(crowd.level),
         priceMin: place.priceMin,

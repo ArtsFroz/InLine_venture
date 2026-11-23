@@ -10,12 +10,12 @@ const rupiah = z.number().int().min(0).max(1_000_000)
 
 /** One place as the app sees it right now (status and crowd come from the app's clock and model). */
 export const PlaceRowSchema = z.object({
-  id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+  id: z.string().regex(/^[A-Za-z0-9_-]{1,60}$/),
   name: text(60),
   category: CATEGORY,
   campus: CAMPUS,
   distanceM: z.number().int().min(0).max(20_000),
-  rating: z.number().min(0).max(5),
+  area: text(20),
   hours: text(20),
   status: z.enum(['Sepi', 'Sedang', 'Ramai', 'Penuh', 'Tutup']),
   priceMin: rupiah,
@@ -27,7 +27,7 @@ export type PlaceRow = z.infer<typeof PlaceRowSchema>
 
 export const ContextSchema = z.object({
   now: text(30),
-  places: z.array(PlaceRowSchema).max(40),
+  places: z.array(PlaceRowSchema).max(80),
 })
 export type ChatContext = z.infer<typeof ContextSchema>
 
@@ -39,8 +39,8 @@ export function contextLines(ctx: ChatContext): string {
       p.name,
       p.category,
       p.campus,
+      p.area,
       `${p.distanceM} m`,
-      `rating ${p.rating}`,
       `jam ${p.hours}`,
       p.status,
       `Rp${p.priceMin}–${p.priceMax}`,
@@ -48,7 +48,7 @@ export function contextLines(ctx: ChatContext): string {
       p.menu.map(([name, price]) => `${name} ${price}`).join('; '),
     ].join(' | '),
   )
-  return [`Waktu sekarang: ${ctx.now}`, 'Tempat (id | nama | kategori | kampus | jarak | rating | jam buka | status sekarang | harga | fasilitas | menu harga):', ...rows].join('\n')
+  return [`Waktu sekarang: ${ctx.now}`, 'Tempat (id | nama | kategori | kampus | area | jarak | jam buka | status sekarang | harga | fasilitas | menu harga):', ...rows].join('\n')
 }
 
 /** Rupiah amounts written in a text: "Rp20.000", "20 ribu", "18rb", "25k", "50.000". */

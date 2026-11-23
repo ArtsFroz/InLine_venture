@@ -19,24 +19,28 @@ export interface HourlyCrowd {
   level: number // busiest share of capacity in that hour (1 = full)
 }
 
+/** Where a place is: the Anggrek canteen areas, a canteen on another campus, or outside campus. */
+export type Area = 'Basement' | 'Outdoor' | 'Lantai 1' | 'Lantai 5' | 'Kampus' | 'Sekitar kampus'
+export const AREAS: readonly Area[] = ['Basement', 'Outdoor', 'Lantai 1', 'Lantai 5', 'Kampus', 'Sekitar kampus']
+
 export interface Place {
-  id: string // slug, e.g. 'kopi-tepi'
+  id: string // slug, e.g. 'bicasa-coffee'; student places start with 'c-'
   name: string
   category: Category
-  type: string // e.g. 'Kafe', 'Kantin', 'Kedai minuman'
-  campus: Campus
-  rating: number
-  reviews: number
-  distanceM: number
+  type: string // e.g. 'Kedai kopi', 'Bakmi', 'Milk tea'
+  campus: Campus // the campus it belongs to, or the nearest one for 'Sekitar kampus'
+  area: Area
+  source: 'tim' | 'mahasiswa' // listed by the InLine team, or suggested by a student and approved
+  distanceM: number // walking distance from the campus lobby (estimate)
   priceMin: number
   priceMax: number
   openHours: string // '07.00–22.00'; open or closed is decided from this and the clock
-  image: string // public path, e.g. '/images/places/kopi-tepi.webp'
-  facilities: string[] // list line: ['Wi‑Fi', 'Colokan', 'Area nugas']
+  facilities: string[] // list line: ['Indoor ber-AC', 'Area makan']
   tags: string[] // detail chips: ['Take away', 'Dekat Anggrek', 'Indoor', 'Wi‑Fi']
   // Only used to seed a virtual queue ticket (Antrean Saya); never shown as a prediction.
   waitMin: number
   queueCount: number
+  locationNote?: string // student places: "Sebelah Indomaret, Jl. Kebon Jeruk"
   promo?: string // shown ONLY inside a banner labeled "Promosi"
   menu: MenuItem[]
 }
@@ -101,7 +105,7 @@ export interface BuddyRequest {
   id: string
   type: OrderType
   placeId: string
-  title: string // 'Kopi Tepi → Anggrek lobby lt. 1'
+  title: string // 'BICASA Coffee → Anggrek lobby lt. 1'
   detail: string // '2 item · Es Kopi Susu, Croissant Cokelat'
   earn: number // Rp6.000 titip / Rp4.000 joki
   etaMin: number

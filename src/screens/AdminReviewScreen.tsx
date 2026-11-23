@@ -10,15 +10,27 @@ import {
 import { useAuth } from '../state/Auth'
 import { useIsAdmin } from '../state/useBuddy'
 import { INPUT_CLASS, LABEL_CLASS } from './parts/ui'
+import { SuggestionReviewList } from './admin/SuggestionReviewList'
 import { cx } from '../lib/cx'
 
-/** Admin: review buddy applications (approve or reject; the photos are wiped either way). */
+/** Admin: review buddy applications (photos are wiped either way) and students' place suggestions. */
 export function AdminReviewScreen() {
   const isAdmin = useIsAdmin()
+  if (!isAdmin) {
+    return (
+      <Screen>
+        <Header title="Review admin" />
+        <InfoNote tone="amber">Halaman ini hanya untuk admin InLine.</InfoNote>
+      </Screen>
+    )
+  }
   return (
     <Screen>
-      <Header title="Review buddy" subtitle="Cek data, KTM, dan selfie sebelum menyetujui" />
-      {isAdmin ? <PendingList /> : <InfoNote tone="amber">Halaman ini hanya untuk admin InLine.</InfoNote>}
+      <Header title="Review admin" subtitle="Pendaftaran buddy dan usulan tempat dari mahasiswa" />
+      <h2 className="mb-2.5 text-[16px] font-extrabold text-ink">Pendaftaran buddy</h2>
+      <PendingList />
+      <h2 className="mt-6 mb-2.5 text-[16px] font-extrabold text-ink">Usulan tempat</h2>
+      <SuggestionReviewList />
     </Screen>
   )
 }

@@ -4,6 +4,7 @@ rules_version = '2';
 // - buddyApplications/{uid}: one buddy application per account. The applicant submits it as "pending";
 //   only an admin can approve or reject it, and the KTM/selfie photos must be wiped in that same write.
 // - admins/{uid}: created by hand in the console. Nobody can write it from the app.
+// - placeSuggestions/{uid}_{n}: places suggested by students, shown to everyone once an admin approves them.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -84,6 +85,62 @@ service cloud.firestore {
 
       // The applicant can withdraw while not yet verified; an admin can remove any application (e.g. revoke a buddy).
       allow delete: if (signedIn() && request.auth.uid == uid && resource.data.status != 'verified') || isAdmin();
+    }
+
+    // ——— Places suggested by students ———
+    // placeSuggestions/{uid}_{1..5}: at most 5 suggestions per account (the id is the cap, no server needed).
+    // Pending ones are seen only by the author and admins; approved ones by every signed-in user.
+
+    function validMenuItem(m) {
+      return m is map && m.keys().hasOnly(['name', 'price']) && m.keys().hasAll(['name', 'price'])
+        && m.name is string && m.name.size() >= 2 && m.name.size() <= 40
+        && m.price is int && m.price >= 1000 && m.price <= 500000;
+    }
+
+    function validSuggestion(d, uid) {
+      return d.keys().hasOnly(['uid', 'name', 'category', 'campus', 'area', 'distanceM', 'locationNote', 'openHours',
+                               'menu', 'status', 'note', 'submittedAt', 'reviewedAt', 'reviewedBy'])
+        && d.keys().hasAll(['uid', 'name', 'category', 'campus', 'area', 'distanceM', 'locationNote', 'openHours',
+                            'menu', 'status', 'note', 'submittedAt', 'reviewedAt', 'reviewedBy'])
+        && d.uid == uid
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 60
+        && d.category in ['Kopi', 'Kantin', 'Minuman', 'Snack']
+        && d.campus in ['Anggrek', 'Syahdan', 'Kijang', 'Binus Square']
+        && d.area in ['Basement', 'Outdoor', 'Lantai 1', 'Lantai 5', 'Kampus', 'Sekitar kampus']
+        && (d.campus == 'Anggrek' || d.area in ['Kampus', 'Sekitar kampus'])
+        && d.distanceM is int && d.distanceM >= 0 && d.distanceM <= 3000
+        && d.locationNote is string && d.locationNote.size() <= 120
+        && d.openHours is string && d.openHours.matches('^([01][0-9]|2[0-3])[.][0-5][0-9]–([01][0-9]|2[0-3])[.][0-5][0-9]$')
+        && d.menu is list && d.menu.size() >= 1 && d.menu.size() <= 3
+        && validMenuItem(d.menu[0])
+        && (d.menu.size() < 2 || validMenuItem(d.menu[1]))
+        && (d.menu.size() < 3 || validMenuItem(d.menu[2]))
+        && d.status == 'pending'
+        && d.note == null && d.reviewedAt == null && d.reviewedBy == null
+        && d.submittedAt == request.time;
+    }
+
+    match /placeSuggestions/{id} {
+      allow read: if signedIn()
+        && (resource.data.status == 'approved' || resource.data.uid == request.auth.uid || isAdmin());
+
+      allow create: if signedIn() && emailVerified()
+        && id in [request.auth.uid + '_1', request.auth.uid + '_2', request.auth.uid + '_3',
+                  request.auth.uid + '_4', request.auth.uid + '_5']
+        && validSuggestion(request.resource.data, request.auth.uid);
+
+      // Review: only the decision fields change, and the reviewer is recorded.
+      allow update: if isAdmin()
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note', 'reviewedAt', 'reviewedBy'])
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && (request.resource.data.note == null
+            || (request.resource.data.note is string && request.resource.data.note.size() <= 200));
+
+      // The author can withdraw while not yet approved (frees the slot); an admin can remove any place.
+      allow delete: if (signedIn() && resource.data.uid == request.auth.uid && resource.data.status != 'approved') || isAdmin();
     }
 
     match /{document=**} {

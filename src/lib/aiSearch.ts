@@ -1,6 +1,6 @@
 // Fake "AI" natural-language search. Deterministic, forgiving keyword parsing of
 // casual Indonesian ("kopi susu dekat Anggrek, antre singkat, budget 25 ribu").
-import { PLACES } from '../data/places'
+import { allPlaces } from '../data/places'
 import type { Campus, Category, CrowdLevel, Place } from '../state/types'
 import { formatRupiah } from './format'
 import { getNow } from './clock'
@@ -18,12 +18,11 @@ export interface ParsedQuery {
   menuKeywords: string[] // e.g. 'kopi susu', 'croissant' (boost ranking, never filter)
 }
 
-export type SortKey = 'sepi' | 'terdekat' | 'rating' | 'termurah'
-export const SORT_KEYS: readonly SortKey[] = ['sepi', 'terdekat', 'rating', 'termurah']
+export type SortKey = 'sepi' | 'terdekat' | 'termurah'
+export const SORT_KEYS: readonly SortKey[] = ['sepi', 'terdekat', 'termurah']
 export const SORT_LABELS: Readonly<Record<SortKey, string>> = {
   sepi: 'Paling sepi',
   terdekat: 'Terdekat',
-  rating: 'Rating tertinggi',
   termurah: 'Termurah',
 }
 export const DEFAULT_SORT: SortKey = 'sepi'
@@ -260,8 +259,6 @@ function primaryCompare(a: Place, b: Place, sort: SortKey): number {
       return CROWD_RANK[crowdOf(a).level] - CROWD_RANK[crowdOf(b).level]
     case 'terdekat':
       return a.distanceM - b.distanceM
-    case 'rating':
-      return b.rating - a.rating || b.reviews - a.reviews
     case 'termurah':
       return a.priceMin - b.priceMin
   }
@@ -304,7 +301,7 @@ const CONSTRAINT_LABELS: Readonly<Record<Constraint, string>> = {
 export function searchPlaces(
   parsed: ParsedQuery,
   sort: SortKey = DEFAULT_SORT,
-  places: readonly Place[] = PLACES,
+  places: readonly Place[] = allPlaces(),
 ): SearchResult {
   const active = [...RELAX_ORDER]
   const dropped: Constraint[] = []

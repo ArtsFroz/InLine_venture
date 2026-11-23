@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell } from 'lucide-react'
 import { Chip, IconButton, Logo, Screen, SectionTitle, showToast } from '../components'
-import { PLACES, RECOMMENDED_PLACE_IDS, getPlace } from '../data/places'
+import { RECOMMENDED_PLACE_IDS } from '../data/places'
+import { usePlaces } from '../state/AppState'
 import { FILTER_KEYS, FILTER_LABELS, buildResultsSearch, type FilterKey } from '../lib/aiSearch'
 import type { Category, Place } from '../state/types'
 import { ROUTES } from '../routes'
@@ -22,10 +23,10 @@ const CHIP_PHRASES: Readonly<Record<FilterKey, string>> = {
   terdekat: 'yang terdekat',
 }
 
-/** Figma picks first (Kopi Tepi, Kopi Kaca), then the other open places that are quietest right now. */
-function recommendedPlaces(now: Now): Place[] {
-  const picked = RECOMMENDED_PLACE_IDS.map(getPlace).filter((p): p is Place => p !== undefined)
-  const extra = PLACES.filter((p) => !RECOMMENDED_PLACE_IDS.includes(p.id))
+/** The team's picks first (BICASA Coffee, Bakmi Effata), then the other open places that are quietest right now. */
+function recommendedPlaces(places: readonly Place[], now: Now): Place[] {
+  const picked = places.filter((p) => RECOMMENDED_PLACE_IDS.includes(p.id))
+  const extra = places.filter((p) => !RECOMMENDED_PLACE_IDS.includes(p.id))
     .map((p) => ({ p, crowd: placeCrowd(p, now.day, now.minute) }))
     .filter(({ crowd }) => !crowd.closed && crowd.level !== 'Tinggi' && crowd.level !== 'Penuh')
     .sort((a, b) => a.crowd.share - b.crowd.share)
@@ -37,7 +38,7 @@ export function HomeScreen() {
   const navigate = useNavigate()
   const [filters, setFilters] = useState<FilterKey[]>([])
   const now = useNow()
-  const recommended = recommendedPlaces(now)
+  const recommended = recommendedPlaces(usePlaces(), now)
 
   const toggleFilter = (key: FilterKey) =>
     setFilters((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]))

@@ -1,15 +1,11 @@
-import type { Campus, Category, MenuItem, Place } from '../state/types'
+import type { Area, Campus, Category, MenuItem, Place } from '../state/types'
 
-// Mock places around the BINUS campuses. The 12 coffee places copy the values of
-// the Figma frames "2 · Hasil AI" and "3 · Detail – <name>" verbatim
-// (U+2011 in "Wi‑Fi", U+2013 in ranges). The 7 non-coffee places are fictional
-// extras so the Kantin / Minuman / Snack categories are not empty.
+// Food places at BINUS @Kemanggisan. Tenant names: FOODPARK Basement from the BINUS announcement
+// (April 2025, Beehive Mart has since closed); Kantin Outdoor, Lantai 1 and Lantai 5 from the team's
+// own visits. Menus, prices, opening hours and walking distances are ESTIMATES until checked on site
+// (the app labels them "perkiraan"). Only Starbucks' hours (07.00–20.00) come from a public listing.
+// Places added by students arrive later from Firestore (see setCommunityPlaces / lib/placeSuggestions.ts).
 // Crowd is not stored here: it is estimated from the class schedule (lib/crowdModel.ts).
-
-const FIGMA_OPEN_HOURS = '07.00–22.00'
-const PROMO_DISKON = 'Diskon 20% semua minuman kopi'
-const PROMO_PAKET = 'Paket hemat mahasiswa Rp20.000'
-const PROMO_CROISSANT = 'Beli 2 gratis 1 croissant'
 
 function menu(placeId: string, items: ReadonlyArray<readonly [string, number]>): MenuItem[] {
   return items.map(([name, price], index) => ({ id: `${placeId}-m${index + 1}`, name, price }))
@@ -21,190 +17,177 @@ interface PlaceSeed {
   category: Category
   type: string
   campus: Campus
-  rating: number
-  reviews: number
+  area: Area
   distanceM: number
-  priceMin: number
-  priceMax: number
-  openHours?: string
+  openHours: string
   facilities: string[]
   tags: string[]
   waitMin: number
   queueCount: number
-  promo?: string
   menu: ReadonlyArray<readonly [string, number]>
 }
 
 function build(seed: PlaceSeed): Place {
   const { menu: menuItems, ...rest } = seed
+  const prices = menuItems.map(([, price]) => price)
   return {
     ...rest,
-    openHours: seed.openHours ?? FIGMA_OPEN_HOURS,
-    image: `/images/places/${seed.id}.webp`,
+    source: 'tim',
+    priceMin: Math.min(...prices),
+    priceMax: Math.max(...prices),
     menu: menu(seed.id, menuItems),
   }
 }
 
+// FOODPARK: indoor, air-conditioned; BINUS says every tenant has halal food.
+const FOODPARK = { campus: 'Anggrek', area: 'Basement', distanceM: 60, openHours: '07.00–18.00', facilities: ['Indoor ber-AC', 'Area makan'] } as const
+const FOODPARK_TAGS = ['FOODPARK', 'Dekat Anggrek', 'Halal', 'Dine in', 'Take away']
+const OUTDOOR = { campus: 'Anggrek', area: 'Outdoor', distanceM: 120, openHours: '07.00–17.00', facilities: ['Outdoor', 'Area makan'] } as const
+const OUTDOOR_TAGS = ['Kantin Outdoor', 'Dekat Anggrek', 'Dine in', 'Take away']
+const LANTAI_1 = { campus: 'Anggrek', area: 'Lantai 1', distanceM: 30, facilities: ['Indoor'] } as const
+const LANTAI_1_TAGS = ['Lantai 1', 'Dekat Anggrek', 'Take away']
+
 const SEEDS: PlaceSeed[] = [
-  // ——— 12 Figma coffee places ———
+  // ——— Anggrek · FOODPARK Basement ———
   {
-    id: 'kopi-tepi', name: 'Kopi Tepi', category: 'Kopi', type: 'Kafe', campus: 'Anggrek',
-    rating: 4.8, reviews: 120, distanceM: 300, priceMin: 20000, priceMax: 50000,
-    facilities: ['Wi‑Fi', 'Colokan', 'Area nugas'], tags: ['Take away', 'Dekat Anggrek', 'Indoor', 'Wi‑Fi'],
-    waitMin: 5, queueCount: 3,
-    promo: PROMO_DISKON,
-    menu: [['Es Kopi Susu', 22000], ['Croissant Cokelat', 18000], ['Air Mineral', 5000]],
+    ...FOODPARK, id: 'bicasa-coffee', name: 'BICASA Coffee', category: 'Kopi', type: 'Kedai kopi',
+    facilities: [...FOODPARK.facilities], tags: FOODPARK_TAGS, waitMin: 4, queueCount: 3,
+    menu: [['Kopi Susu BICASA', 18000], ['Americano', 15000], ['Caffe Latte', 22000], ['Matcha Latte', 24000]],
   },
   {
-    id: 'ruang-seduh', name: 'Ruang Seduh', category: 'Kopi', type: 'Kafe', campus: 'Anggrek',
-    rating: 4.6, reviews: 88, distanceM: 450, priceMin: 25000, priceMax: 45000,
-    facilities: ['Wi‑Fi', 'Colokan', 'Indoor'], tags: ['Wi‑Fi', 'Buka malam', 'Take away', 'Dekat Anggrek'],
-    waitMin: 4, queueCount: 1,
-    promo: PROMO_CROISSANT,
-    menu: [['Cappuccino', 28000], ['Croissant Butter', 25000], ['Es Teh Lemon', 18000]],
+    ...FOODPARK, id: 'rasa-sayange', name: 'Rasa Sayange', category: 'Kantin', type: 'Masakan Indonesia',
+    facilities: [...FOODPARK.facilities], tags: FOODPARK_TAGS, waitMin: 8, queueCount: 6,
+    menu: [['Nasi Ayam Goreng', 22000], ['Nasi Ayam Bakar', 25000], ['Nasi Campur', 24000], ['Es Teh Manis', 6000]],
   },
   {
-    id: 'kedai-senja', name: 'Kedai Senja', category: 'Kopi', type: 'Kafe', campus: 'Syahdan',
-    rating: 4.5, reviews: 64, distanceM: 800, priceMin: 18000, priceMax: 40000,
-    facilities: ['Wi‑Fi', 'Outdoor'], tags: ['Colokan', 'QRIS', 'Dekat Syahdan', 'Outdoor'],
-    waitMin: 7, queueCount: 6,
-    promo: PROMO_DISKON,
-    menu: [['Es Kopi Aren', 20000], ['Pisang Goreng Keju', 18000], ['Teh Tarik', 15000]],
+    ...FOODPARK, id: 'cerita-cinta', name: 'Cerita Cinta', category: 'Kantin', type: 'Tenant FOODPARK',
+    facilities: [...FOODPARK.facilities], tags: FOODPARK_TAGS, waitMin: 7, queueCount: 5,
+    menu: [['Nasi Ayam Penyet', 22000], ['Nasi Telur Balado', 18000], ['Es Jeruk', 8000]],
   },
   {
-    id: 'kopi-kaca', name: 'Kopi Kaca', category: 'Kopi', type: 'Kafe', campus: 'Anggrek',
-    rating: 4.7, reviews: 92, distanceM: 250, priceMin: 18000, priceMax: 48000,
-    facilities: ['Wi‑Fi', 'Colokan', 'Area nugas'], tags: ['Dekat Anggrek', 'Indoor', 'Wi‑Fi', 'Buka malam'],
-    waitMin: 2, queueCount: 1,
-    promo: PROMO_PAKET,
-    menu: [['Caffe Latte', 26000], ['Es Kopi Aren', 18000], ['Paket Hemat Kopi + Roti', 20000], ['Air Mineral', 5000]],
+    ...FOODPARK, id: 'chicken-oriental', name: 'Chicken Oriental', category: 'Kantin', type: 'Masakan oriental',
+    facilities: [...FOODPARK.facilities], tags: FOODPARK_TAGS, waitMin: 9, queueCount: 7,
+    menu: [['Nasi Ayam Cah Jamur', 25000], ['Chicken Rice Bowl', 24000], ['Ayam Saus Mentega', 27000], ['Es Teh Manis', 6000]],
   },
   {
-    // Figma result meta line reads "v" (typo); values below come from its Detail frame.
-    id: 'ruang-baca', name: 'Ruang Baca', category: 'Kopi', type: 'Kafe', campus: 'Kijang',
-    rating: 4.9, reviews: 156, distanceM: 520, priceMin: 28000, priceMax: 55000,
-    facilities: ['Wi‑Fi', 'Colokan', 'Perpustakaan'], tags: ['Outdoor', 'Menu < 25rb', 'Colokan', 'QRIS'],
-    waitMin: 4, queueCount: 2,
-    promo: PROMO_DISKON,
-    menu: [['Flat White', 30000], ['Matcha Latte', 30000], ['Cheesecake', 32000]],
+    ...FOODPARK, id: 'good-waffle', name: 'Good Waffle', category: 'Snack', type: 'Waffle',
+    facilities: [...FOODPARK.facilities], tags: FOODPARK_TAGS, waitMin: 5, queueCount: 2,
+    menu: [['Waffle Cokelat', 18000], ['Waffle Keju', 18000], ['Waffle Es Krim', 25000]],
   },
   {
-    id: 'kedai-hujan', name: 'Kedai Hujan', category: 'Kopi', type: 'Kafe', campus: 'Anggrek',
-    rating: 4.4, reviews: 71, distanceM: 900, priceMin: 19000, priceMax: 38000,
-    facilities: ['Wi‑Fi', 'Outdoor', 'View jalan'], tags: ['Buka malam', 'Take away', 'Dekat Anggrek', 'Indoor'],
-    waitMin: 9, queueCount: 5,
-    promo: PROMO_DISKON,
-    menu: [['Kopi Tubruk', 19000], ['Roti Bakar Cokelat', 20000], ['Wedang Jahe', 18000]],
+    ...FOODPARK, id: 'rasela', name: 'Rasela', category: 'Kantin', type: 'Tenant FOODPARK',
+    facilities: [...FOODPARK.facilities], tags: FOODPARK_TAGS, waitMin: 7, queueCount: 5,
+    menu: [['Nasi Ayam Rica', 23000], ['Nasi Sayur Lauk', 20000], ['Es Teh Manis', 6000]],
   },
   {
-    id: 'seduh-studio', name: 'Seduh Studio', category: 'Kopi', type: 'Kafe', campus: 'Syahdan',
-    rating: 4.8, reviews: 104, distanceM: 380, priceMin: 24000, priceMax: 42000,
-    facilities: ['Wi‑Fi', 'Colokan', 'Indoor'], tags: ['QRIS', 'Dekat Syahdan', 'Outdoor', 'Menu < 25rb'],
-    waitMin: 6, queueCount: 3,
-    promo: PROMO_DISKON,
-    menu: [['V60 Single Origin', 32000], ['Americano', 24000], ['Banana Bread', 25000]],
+    ...FOODPARK, id: 'bakmi-effata', name: 'Bakmi Effata', category: 'Kantin', type: 'Bakmi',
+    facilities: [...FOODPARK.facilities], tags: FOODPARK_TAGS, waitMin: 10, queueCount: 8,
+    menu: [['Bakmi Ayam', 22000], ['Bakmi Ayam Pangsit', 27000], ['Pangsit Goreng', 15000], ['Es Teh Manis', 6000]],
   },
   {
-    id: 'kopi-kayu', name: 'Kopi Kayu', category: 'Kopi', type: 'Kafe', campus: 'Binus Square',
-    rating: 4.5, reviews: 67, distanceM: 950, priceMin: 21000, priceMax: 41000,
-    facilities: ['Wi‑Fi', 'Outdoor', 'Area nugas'], tags: ['Indoor', 'Wi‑Fi', 'Buka malam', 'Take away'],
-    waitMin: 8, queueCount: 4,
-    promo: PROMO_CROISSANT,
-    menu: [['Es Kopi Aren', 23000], ['Croissant Almond', 26000], ['Lemon Tea', 18000]],
-  },
-  {
-    id: 'ruang-hijau', name: 'Ruang Hijau', category: 'Kopi', type: 'Kafe', campus: 'Syahdan',
-    rating: 4.7, reviews: 95, distanceM: 600, priceMin: 26000, priceMax: 50000,
-    facilities: ['Wi‑Fi', 'Colokan', 'Indoor'], tags: ['Menu < 25rb', 'Colokan', 'QRIS', 'Dekat Syahdan'],
-    waitMin: 10, queueCount: 5,
-    promo: PROMO_DISKON,
-    menu: [['Matcha Latte', 30000], ['Cold Brew', 28000], ['Avocado Toast', 35000]],
-  },
-  {
-    id: 'kedai-pagi', name: 'Kedai Pagi', category: 'Kopi', type: 'Kafe', campus: 'Anggrek',
-    rating: 4.3, reviews: 58, distanceM: 1100, priceMin: 17000, priceMax: 35000,
-    facilities: ['Wi‑Fi', 'Outdoor', 'Sarapan'], tags: ['Take away', 'Dekat Anggrek', 'Indoor', 'Wi‑Fi'],
-    waitMin: 3, queueCount: 2,
-    promo: PROMO_PAKET,
-    menu: [['Kopi Hitam', 17000], ['Nasi Uduk Pagi', 20000], ['Roti Srikaya', 15000]],
-  },
-  {
-    id: 'seduh-malam', name: 'Seduh Malam', category: 'Kopi', type: 'Kafe', campus: 'Syahdan',
-    rating: 4.6, reviews: 82, distanceM: 700, priceMin: 23000, priceMax: 44000,
-    facilities: ['Wi‑Fi', 'Colokan', 'Indoor'], tags: ['Dekat Syahdan', 'Outdoor', 'Menu < 25rb', 'Colokan'],
-    waitMin: 5, queueCount: 3,
-    promo: PROMO_DISKON,
-    menu: [['Es Kopi Pandan', 24000], ['Kentang Goreng', 22000], ['Cokelat Panas', 25000]],
-  },
-  {
-    id: 'kopi-bawah', name: 'Kopi Bawah', category: 'Kopi', type: 'Kafe', campus: 'Anggrek',
-    rating: 4.4, reviews: 61, distanceM: 1200, priceMin: 20000, priceMax: 40000,
-    facilities: ['Wi‑Fi', 'Outdoor', 'Area nugas'], tags: ['Wi‑Fi', 'Buka malam', 'Take away', 'Dekat Anggrek'],
-    waitMin: 7, queueCount: 4,
-    promo: PROMO_DISKON,
-    menu: [['Americano', 20000], ['Es Kopi Aren', 22000], ['Donat Gula', 12000]],
+    ...FOODPARK, id: 'yoshinoya-foodpark', name: 'Yoshinoya (FOODPARK)', category: 'Kantin', type: 'Rice bowl Jepang',
+    facilities: [...FOODPARK.facilities], tags: FOODPARK_TAGS, waitMin: 8, queueCount: 6,
+    menu: [['Beef Bowl', 45000], ['Chicken Teriyaki Bowl', 40000], ['Ocha', 10000]],
   },
 
-  // ——— Fictional extras (no promos) ———
+  // ——— Anggrek · Kantin Outdoor ———
   {
-    id: 'dapur-mahasiswa', name: 'Dapur Mahasiswa', category: 'Kantin', type: 'Kantin', campus: 'Binus Square',
-    rating: 4.5, reviews: 210, distanceM: 350, priceMin: 15000, priceMax: 35000, openHours: '07.00–20.00',
-    facilities: ['Colokan', 'Area makan luas'], tags: ['Dine in', 'Dekat Binus Square', 'QRIS', 'Halal'],
-    waitMin: 12, queueCount: 9,
-    menu: [['Nasi Ayam Geprek', 22000], ['Nasi Goreng Kampus', 20000], ['Es Teh Manis', 6000], ['Air Mineral', 5000]],
+    ...OUTDOOR, id: 'nasi-ayam-hainan', name: 'Nasi Ayam Hainan', category: 'Kantin', type: 'Nasi hainan',
+    facilities: [...OUTDOOR.facilities], tags: OUTDOOR_TAGS, waitMin: 8, queueCount: 6,
+    menu: [['Nasi Ayam Hainan Rebus', 22000], ['Nasi Ayam Hainan Panggang', 25000], ['Es Teh Manis', 6000]],
   },
   {
-    id: 'kantin-kijang', name: 'Kantin Kijang', category: 'Kantin', type: 'Kantin', campus: 'Kijang',
-    rating: 4.3, reviews: 142, distanceM: 500, priceMin: 12000, priceMax: 30000, openHours: '07.00–19.00',
-    facilities: ['Colokan', 'Indoor'], tags: ['Dine in', 'Dekat Kijang', 'QRIS', 'Halal'],
-    waitMin: 6, queueCount: 5,
-    menu: [['Nasi Ayam Bakar', 25000], ['Mie Ayam', 18000], ['Soto Ayam', 20000], ['Es Jeruk', 8000]],
+    ...OUTDOOR, id: 'jus-buah', name: 'Jus Buah', category: 'Minuman', type: 'Kedai jus',
+    facilities: [...OUTDOOR.facilities], tags: OUTDOOR_TAGS, waitMin: 4, queueCount: 3,
+    menu: [['Jus Alpukat', 15000], ['Jus Mangga', 13000], ['Jus Jeruk', 12000]],
+  },
+
+  // ——— Anggrek · Lantai 1 ———
+  {
+    ...LANTAI_1, id: 'starbucks', name: 'Starbucks', category: 'Kopi', type: 'Kafe', openHours: '07.00–20.00',
+    facilities: ['Indoor', 'Area nugas'], tags: LANTAI_1_TAGS, waitMin: 6, queueCount: 4,
+    menu: [['Caffe Latte', 50000], ['Java Chip Frappuccino', 62000], ['Americano', 42000], ['Croissant', 30000]],
   },
   {
-    id: 'dapur-syahdan', name: 'Dapur Syahdan', category: 'Kantin', type: 'Kantin', campus: 'Syahdan',
-    rating: 4.4, reviews: 118, distanceM: 450, priceMin: 10000, priceMax: 25000, openHours: '07.00–19.00',
-    facilities: ['Colokan', 'Indoor'], tags: ['Dine in', 'Dekat Syahdan', 'QRIS', 'Halal'],
+    ...LANTAI_1, id: 'aw', name: 'A&W', category: 'Kantin', type: 'Fast food', openHours: '08.00–20.00',
+    facilities: [...LANTAI_1.facilities], tags: LANTAI_1_TAGS, waitMin: 7, queueCount: 4,
+    menu: [['Paket Ayam + Nasi', 40000], ['Burger', 35000], ['Root Beer', 20000], ['Waffle Fries', 25000]],
+  },
+  {
+    ...LANTAI_1, id: 'charmony', name: 'Charmony Fresh Milk Tea', category: 'Minuman', type: 'Milk tea', openHours: '09.00–20.00',
+    facilities: [...LANTAI_1.facilities], tags: LANTAI_1_TAGS, waitMin: 5, queueCount: 3,
+    menu: [['Fresh Milk Tea', 28000], ['Matcha Milk Tea', 37000], ['Peach Oolong Milk Tea', 32000]],
+  },
+  {
+    ...LANTAI_1, id: 'yoshinoya-lantai-1', name: 'Yoshinoya (Lantai 1)', category: 'Kantin', type: 'Rice bowl Jepang', openHours: '08.00–20.00',
+    facilities: [...LANTAI_1.facilities], tags: LANTAI_1_TAGS, waitMin: 6, queueCount: 4,
+    menu: [['Beef Bowl', 45000], ['Chicken Teriyaki Bowl', 40000], ['Ocha', 10000]],
+  },
+  {
+    ...LANTAI_1, id: 'hokben', name: 'HokBen', category: 'Kantin', type: 'Masakan Jepang', openHours: '08.00–20.00',
+    facilities: [...LANTAI_1.facilities], tags: LANTAI_1_TAGS, waitMin: 7, queueCount: 5,
+    menu: [['Bento Chicken Teriyaki', 52000], ['Ekkado (3 pcs)', 25000], ['Chicken Katsu Rice', 45000], ['Ocha', 12000]],
+  },
+
+  // ——— Anggrek · Lantai 5 ———
+  {
+    id: 'kantin-lantai-5', name: 'Kantin Lantai 5', category: 'Snack', type: 'Minimarket kampus', campus: 'Anggrek', area: 'Lantai 5',
+    distanceM: 90, openHours: '07.00–18.00', facilities: ['Indoor', 'Take away'], tags: ['Lantai 5', 'Dekat Anggrek', 'Take away'],
+    waitMin: 3, queueCount: 2,
+    menu: [['Roti / snack', 8000], ['Minuman dingin', 7000], ['Kopi kemasan', 12000], ['Makanan kotak', 22000]],
+  },
+
+  // ——— Other campuses (tenant names not known yet) ———
+  {
+    id: 'foodpark-syahdan', name: 'FoodPark Syahdan', category: 'Kantin', type: 'Kantin semi-outdoor', campus: 'Syahdan', area: 'Kampus',
+    distanceM: 100, openHours: '07.00–19.00', facilities: ['Outdoor', 'Area makan'], tags: ['Dekat Syahdan', 'Dine in', 'Take away'],
     waitMin: 6, queueCount: 4,
-    menu: [['Nasi Ayam Penyet', 18000], ['Nasi Telur Balado', 13000], ['Gado-gado', 15000], ['Es Teh Manis', 5000]],
+    menu: [['Nasi Ayam Penyet', 18000], ['Mie Ayam', 17000], ['Es Teh Manis', 5000]],
   },
   {
-    id: 'teras-teh', name: 'Teras Teh', category: 'Minuman', type: 'Kedai minuman', campus: 'Syahdan',
-    rating: 4.6, reviews: 98, distanceM: 420, priceMin: 8000, priceMax: 25000, openHours: '08.00–21.00',
-    facilities: ['Wi‑Fi', 'Outdoor'], tags: ['Take away', 'Dekat Syahdan', 'QRIS'],
-    waitMin: 8, queueCount: 7,
-    menu: [['Es Teh Leci', 15000], ['Teh Susu Boba', 20000], ['Lemon Tea', 12000]],
+    id: 'kantin-kijang', name: 'Kantin Kijang', category: 'Kantin', type: 'Kantin', campus: 'Kijang', area: 'Kampus',
+    distanceM: 80, openHours: '07.00–18.00', facilities: ['Area makan'], tags: ['Dekat Kijang', 'Dine in'],
+    waitMin: 6, queueCount: 4,
+    menu: [['Nasi Ayam Bakar', 22000], ['Soto Ayam', 18000], ['Es Jeruk', 7000]],
   },
   {
-    id: 'segar-jus', name: 'Segar Jus Bar', category: 'Minuman', type: 'Kedai minuman', campus: 'Kijang',
-    rating: 4.4, reviews: 76, distanceM: 650, priceMin: 12000, priceMax: 28000, openHours: '08.00–20.00',
-    facilities: ['Indoor', 'Colokan'], tags: ['Take away', 'Dekat Kijang', 'QRIS'],
-    waitMin: 5, queueCount: 3,
-    menu: [['Jus Alpukat', 18000], ['Jus Mangga', 15000], ['Smoothie Stroberi', 22000]],
-  },
-  {
-    id: 'roti-sudut', name: 'Roti Sudut', category: 'Snack', type: 'Toko roti', campus: 'Binus Square',
-    rating: 4.7, reviews: 131, distanceM: 280, priceMin: 10000, priceMax: 30000, openHours: '07.00–21.00',
-    facilities: ['Indoor', 'Take away'], tags: ['Dekat Binus Square', 'Take away', 'QRIS'],
-    waitMin: 4, queueCount: 3,
-    menu: [['Croissant Cokelat', 18000], ['Roti Sosis', 14000], ['Donat Gula', 10000], ['Air Mineral', 5000]],
-  },
-  {
-    id: 'camilan-koridor', name: 'Camilan Koridor', category: 'Snack', type: 'Kios camilan', campus: 'Anggrek',
-    rating: 4.2, reviews: 54, distanceM: 200, priceMin: 8000, priceMax: 20000, openHours: '17.00–22.00',
-    facilities: ['Take away', 'Outdoor'], tags: ['Dekat Anggrek', 'Take away', 'Buka malam'],
-    waitMin: 2, queueCount: 0,
-    menu: [['Cireng Isi', 12000], ['Risoles Mayo', 10000], ['Pisang Cokelat', 12000]],
+    id: 'kantin-binus-square', name: 'Kantin Binus Square', category: 'Kantin', type: 'Food court asrama', campus: 'Binus Square', area: 'Kampus',
+    distanceM: 80, openHours: '07.00–21.00', facilities: ['Indoor', 'Area makan'], tags: ['Dekat Binus Square', 'Dine in', 'Take away'],
+    waitMin: 8, queueCount: 6,
+    menu: [['Nasi Ayam Geprek', 20000], ['Nasi Goreng', 20000], ['Es Teh Manis', 5000]],
   },
 ]
 
 export const PLACES: readonly Place[] = SEEDS.map(build)
 
-export const PLACE_IDS: readonly string[] = PLACES.map((place) => place.id)
+/** Home "Rekomendasi untukmu" starts with these, then the quietest open places. */
+export const RECOMMENDED_PLACE_IDS: readonly string[] = ['bicasa-coffee', 'bakmi-effata']
 
-export function getPlace(id: string): Place | undefined {
-  return PLACES.find((place) => place.id === id)
+// ——— Places added by students (approved in /admin, loaded from Firestore) ———
+
+/** Ids of student places start with this, so they never collide with the ids above. */
+export const COMMUNITY_ID_PREFIX = 'c-'
+
+let community: readonly Place[] = []
+let all: readonly Place[] = PLACES
+const listeners = new Set<() => void>()
+
+export function setCommunityPlaces(next: readonly Place[]): void {
+  community = next
+  all = [...PLACES, ...community]
+  listeners.forEach((listener) => listener())
 }
 
-/** Home "Rekomendasi untukmu" (Figma: Kopi Tepi, Kopi Kaca). */
-export const RECOMMENDED_PLACE_IDS: readonly string[] = ['kopi-tepi', 'kopi-kaca']
+export function subscribePlaces(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => listeners.delete(listener)
+}
 
+/** Every place: the team's list plus approved student places. */
+export function allPlaces(): readonly Place[] {
+  return all
+}
+
+export function getPlace(id: string): Place | undefined {
+  return all.find((place) => place.id === id)
+}

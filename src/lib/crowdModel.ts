@@ -3,7 +3,7 @@
 // lunch (11.00–14.00), stay up while students with a free session wait between classes,
 // and fade in the late afternoon. Every constant below is an ASSUMPTION to be replaced
 // by field observation and user reports.
-import type { Campus, Category, CrowdLevel, HourlyCrowd, Place } from '../state/types'
+import type { Area, Campus, Category, CrowdLevel, HourlyCrowd, Place } from '../state/types'
 import { hhmm, type DayIndex } from './clock'
 
 /** Class sessions [start, end] in minutes since midnight: 07.20–09.00 … 17.20–19.00. */
@@ -93,10 +93,22 @@ const PEAK: Readonly<Record<Category, number>> = (() => {
   return { Kopi: peakOf('Kopi'), Kantin: peakOf('Kantin'), Minuman: peakOf('Minuman'), Snack: peakOf('Snack') }
 })()
 
-/** Busier places (more reviews) fill up sooner. */
-function popularity(place: Place): number {
-  return Math.min(1.15, Math.max(0.8, 0.75 + place.reviews / 400))
+/**
+ * How full an area gets compared with the campus average. FOODPARK Basement is the first choice for lunch;
+ * Kantin Outdoor is the second choice and also takes the overflow when the Basement is full; Lantai 1 chains
+ * are pricier so fewer students go there; Lantai 5 (category Snack) already follows the break spikes.
+ */
+const AREA_FACTOR: Readonly<Record<Area, number>> = {
+  Basement: 1,
+  Outdoor: 0.8,
+  'Lantai 1': 0.7,
+  'Lantai 5': 0.9,
+  Kampus: 1,
+  'Sekitar kampus': 0.6,
 }
+/** Share of the Basement crowd above 90% that moves to Kantin Outdoor. */
+const OVERFLOW_TO_OUTDOOR = 0.5
+const BASEMENT_FULL = 0.9
 
 function parseOpenHours(text: string): [number, number] {
   const m = /(\d{2})\.(\d{2})\D+(\d{2})\.(\d{2})/.exec(text)
@@ -115,13 +127,21 @@ export function levelFromShare(share: number): CrowdLevel {
 export function crowdShare(place: Place, day: DayIndex, minute: number): number {
   const [open, close] = parseOpenHours(place.openHours)
   if (minute < open || minute >= close || minute < FIRST || minute >= LAST) return 0
+  let share = demandShare(place.category, place.campus, day, minute) * AREA_FACTOR[place.area]
+  if (place.area === 'Outdoor' && place.category === 'Kantin') {
+    const basement = demandShare('Kantin', place.campus, day, minute) * AREA_FACTOR.Basement
+    share += OVERFLOW_TO_OUTDOOR * Math.max(0, basement - BASEMENT_FULL)
+  }
+  if (place.campus === 'Binus Square') share += dormShare(minute) * (day === 0 ? 0.8 : 1)
+  return Math.round(share * 100) / 100
+}
+
+/** Campus-wide demand for a category: a place of average pull is ~95% full at a normal Monday peak. */
+function demandShare(category: Category, campus: Campus, day: DayIndex, minute: number): number {
   const slot = DEMAND[Math.floor((minute - FIRST) / STEP)]
   // Friday prayer: fewer people around 11.40–12.40, then everyone eats at once.
   const friday = day === 5 ? (minute >= 700 && minute < 760 ? 0.65 : minute >= 760 && minute < 800 ? 1.25 : 1) : 1
-  let share = (mixFor(place.category, slot) / PEAK[place.category]) * 0.95
-  share *= DAY_FACTOR[day] * friday * CAMPUS_FACTOR[place.campus] * popularity(place)
-  if (place.campus === 'Binus Square') share += dormShare(minute) * (day === 0 ? 0.8 : 1)
-  return Math.round(share * 100) / 100
+  return (mixFor(category, slot) / PEAK[category]) * 0.95 * DAY_FACTOR[day] * friday * CAMPUS_FACTOR[campus]
 }
 
 /** Binus Square is a dorm: busiest at breakfast and dinner, not at class breaks. */

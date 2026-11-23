@@ -12,7 +12,7 @@ import { opensAt } from './parts/placeText'
 import { usePlaceCrowd } from './parts/usePlaceCrowd'
 import { LABEL_CLASS, NotFoundScreen } from './parts/ui'
 
-/** Figma (Kopi Tepi): the first two menu items start at 1, the rest at 0. */
+/** The first two menu items start at 1, the rest at 0 (as in the Figma design). */
 const PRESELECTED_ITEMS = 2
 
 function initialQuantities(place: Place): Record<string, number> {

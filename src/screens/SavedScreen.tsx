@@ -1,11 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Heart } from 'lucide-react'
 import { Button, Card, CrowdBadge, IconButton, Screen, showToast } from '../components'
-import { getPlace } from '../data/places'
-import { useAppState } from '../state/AppState'
+import { useAppState, usePlaces } from '../state/AppState'
 import type { Place } from '../state/types'
 import { ROUTES } from '../routes'
-import { crowdDetail, ratingDistance } from './parts/placeText'
+import { areaDistance, crowdDetail } from './parts/placeText'
 import { EmptyState } from './parts/ui'
 import { usePlaceCrowd } from './parts/usePlaceCrowd'
 
@@ -24,7 +23,7 @@ function SavedCard({ place, onUnsave }: SavedCardProps) {
         className="min-w-0 flex-1 rounded-l-card py-3 pl-3 transition-colors duration-150 hover:bg-black/[0.015] focus-visible:ring-[3px] focus-visible:ring-primary/45 focus-visible:outline-none"
       >
         <span className="block truncate text-[16px] leading-[19px] font-bold text-ink">{place.name}</span>
-        <span className="mt-0.5 block text-[12.5px] leading-[15px] text-muted">{ratingDistance(place)}</span>
+        <span className="mt-0.5 block text-[12.5px] leading-[15px] text-muted">{areaDistance(place)}</span>
         <CrowdBadge level={crowd.level} detail={crowdDetail(crowd)} className="mt-1.5" />
       </Link>
       <IconButton
@@ -42,7 +41,10 @@ function SavedCard({ place, onUnsave }: SavedCardProps) {
 export function SavedScreen() {
   const navigate = useNavigate()
   const { state, actions } = useAppState()
-  const places = state.savedPlaceIds.map(getPlace).filter((p): p is Place => p !== undefined)
+  const allPlaces = usePlaces()
+  const places = state.savedPlaceIds
+    .map((id) => allPlaces.find((place) => place.id === id))
+    .filter((p): p is Place => p !== undefined)
 
   const unsave = (place: Place) => {
     actions.toggleSaved(place.id)

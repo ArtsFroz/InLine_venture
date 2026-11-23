@@ -117,9 +117,12 @@ export function ProfileScreen() {
 
       <Card as="section" padding="none" className="mt-3.5 px-2 py-1" ariaLabel="Pengaturan akun">
         <ul>
+          <li>
+            <MenuRow label="Usulkan tempat makan" onClick={() => navigate(ROUTES.suggest)} />
+          </li>
           {isAdmin && (
             <li>
-              <MenuRow label="Review pendaftaran buddy (admin)" onClick={() => navigate(ROUTES.admin)} />
+              <MenuRow label="Review buddy & usulan tempat (admin)" onClick={() => navigate(ROUTES.admin)} />
             </li>
           )}
           {MENU_ROWS.map((label) => (

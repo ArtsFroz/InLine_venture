@@ -17,15 +17,15 @@ import type { OrderLine, OrderType } from '../state/types'
 /** Demo times for the crowd prediction (presentations often happen outside class hours). */
 const TIME_PRESETS: readonly { label: string; day: DayIndex; minute: number }[] = [
   { label: 'Sel 10.35 · jelang jeda', day: 2, minute: 635 },
-  { label: 'Sel 12.55 · puncak', day: 2, minute: 775 },
+  { label: 'Sel 13.05 · puncak', day: 2, minute: 785 },
   { label: 'Sel 14.30 · lebih lega', day: 2, minute: 870 },
   { label: 'Jum 12.10 · Jumatan', day: 5, minute: 730 },
   { label: 'Sab 12.30 · sepi', day: 6, minute: 750 },
 ]
 
-const DEMO_PLACE_ID = 'kopi-tepi'
+const DEMO_PLACE_ID = 'bicasa-coffee'
 const SAMPLE_QUERY = 'Kopi susu dekat Anggrek, antre singkat, budget 25 ribu.'
-const DEMO_ITEMS = ['Es Kopi Susu', 'Croissant Cokelat']
+const DEMO_ITEMS = ['Kopi Susu BICASA', 'Caffe Latte']
 
 interface Jump {
   tag: string
@@ -129,7 +129,7 @@ export function DemoControls() {
   const jumps: Jump[] = [
     { tag: '1', label: 'Home', run: () => navigate(ROUTES.home) },
     { tag: '2', label: 'Hasil AI', run: () => navigate(ROUTES.results + buildResultsSearch({ q: SAMPLE_QUERY })) },
-    { tag: '3', label: 'Detail Kopi Tepi', run: () => navigate(ROUTES.place(DEMO_PLACE_ID)) },
+    { tag: '3', label: 'Detail BICASA Coffee', run: () => navigate(ROUTES.place(DEMO_PLACE_ID)) },
     {
       tag: '4',
       label: 'Antrean Saya',

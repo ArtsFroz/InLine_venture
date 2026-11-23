@@ -1,23 +1,23 @@
 import { Card, CrowdBadge, PlaceImage, Tag } from '../../components'
 import type { Place } from '../../state/types'
-import { formatDistance, formatPriceRange } from '../../lib/format'
+import { formatPriceRange } from '../../lib/format'
 import { ROUTES } from '../../routes'
-import { opensAt } from '../parts/placeText'
+import { areaDistance, opensAt } from '../parts/placeText'
 import { usePlaceCrowd } from '../parts/usePlaceCrowd'
 
 interface ResultCardProps {
   place: Place
 }
 
-/** Hasil AI list card: square photo, name, meta, facilities, crowd pill (02-hasil-ai). */
+/** Hasil AI list card: category tile, name, meta, facilities, crowd pill (02-hasil-ai). */
 export function ResultCard({ place }: ResultCardProps) {
   const crowd = usePlaceCrowd(place)
-  const meta = `${place.rating.toFixed(1)} (${place.reviews}) · ${formatDistance(place.distanceM)} · ${formatPriceRange(place.priceMin, place.priceMax)}`
+  const meta = `${areaDistance(place)} · ${formatPriceRange(place.priceMin, place.priceMax)}`
   return (
     <Card to={ROUTES.place(place.id)} padding="none" className="p-2.5">
       <span className="flex gap-3">
         <span className="block size-[92px] shrink-0">
-          <PlaceImage src={place.image} alt={`Foto ${place.name}`} width={92} height={92} fill rounded="rounded-[12px]" />
+          <PlaceImage category={place.category} alt={place.category} width={92} height={92} fill rounded="rounded-[12px]" />
         </span>
         <span className="flex min-w-0 flex-1 flex-col pt-px">
           <span className="truncate text-[16px] leading-[19px] font-bold text-ink">{place.name}</span>

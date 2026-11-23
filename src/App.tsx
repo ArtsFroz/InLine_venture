@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppStateProvider } from './state/AppState'
 import { AuthProvider, useAuth } from './state/Auth'
@@ -19,6 +20,11 @@ import { ProfileScreen } from './screens/ProfileScreen'
 import { BuddyModeScreen } from './screens/BuddyModeScreen'
 import { BuddyApplyScreen } from './screens/BuddyApplyScreen'
 import { AdminReviewScreen } from './screens/AdminReviewScreen'
+import { SuggestPlaceScreen } from './screens/SuggestPlaceScreen'
+import { setCommunityPlaces } from './data/places'
+import { firebaseConfigured } from './lib/firebase'
+import { suggestionToPlace, watchApprovedSuggestions } from './lib/placeSuggestions'
+import { showToast } from './components'
 import { canUseBuddyMode, useBuddyAccess } from './state/useBuddy'
 import { ROUTES } from './routes'
 
@@ -29,9 +35,26 @@ function BuddyGate() {
   return canUseBuddyMode(access) ? <BuddyModeScreen /> : <Navigate to={ROUTES.buddyApply} replace />
 }
 
+/** Adds approved student places to the place list while a Firebase user is signed in. */
+function useApprovedPlaces(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return undefined
+    const stop = watchApprovedSuggestions(
+      // A place needs at least one menu item for its price range (the rules require one).
+      (list) => setCommunityPlaces(list.filter((s) => s.menu.length > 0).map(suggestionToPlace)),
+      () => showToast('Tempat usulan mahasiswa gagal dimuat'),
+    )
+    return () => {
+      stop()
+      setCommunityPlaces([])
+    }
+  }, [enabled])
+}
+
 /** Shows Masuk / Daftar until the user is signed in. */
 function AppRoutes() {
-  const { status } = useAuth()
+  const { status, user } = useAuth()
+  useApprovedPlaces(firebaseConfigured && status === 'signedIn' && user?.provider !== 'demo')
   if (status === 'loading') return <div role="status" aria-label="Memuat" className="flex-1" />
   if (status === 'signedOut') return <AuthScreen />
   return (
@@ -51,6 +74,7 @@ function AppRoutes() {
       <Route path="/buddy" element={<BuddyGate />} />
       <Route path="/buddy/daftar" element={<BuddyApplyScreen />} />
       <Route path="/admin" element={<AdminReviewScreen />} />
+      <Route path="/usulkan" element={<SuggestPlaceScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

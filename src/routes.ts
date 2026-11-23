@@ -14,5 +14,6 @@ export const ROUTES = {
   profile: '/profil',
   buddy: '/buddy', // Mode Buddy: only for verified buddies
   buddyApply: '/buddy/daftar', // Jadi Buddy: NIM + KTM + selfie, then review status
-  admin: '/admin', // Review buddy applications (admins only)
+  admin: '/admin', // Review buddy applications and place suggestions (admins only)
+  suggest: '/usulkan', // Usulkan tempat: students add a missing place
 } as const
