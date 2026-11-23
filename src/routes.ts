@@ -2,6 +2,7 @@
 export const ROUTES = {
   home: '/',
   results: '/hasil', // Hasil AI / Radar. Query: ?q=<text>
+  chat: '/chat', // AI Rekomendasi chat. ?q=<text> sends a first message
   place: (id: string) => `/tempat/${id}`,
   queue: '/antrean', // Antrean Saya. ?batal=1 opens the cancel sheet
   joki: (placeId: string) => `/joki/${placeId}`,
@@ -11,5 +12,7 @@ export const ROUTES = {
   done: (orderId: string) => `/selesai/${orderId}`,
   saved: '/disimpan',
   profile: '/profil',
-  buddy: '/buddy',
+  buddy: '/buddy', // Mode Buddy: only for verified buddies
+  buddyApply: '/buddy/daftar', // Jadi Buddy: NIM + KTM + selfie, then review status
+  admin: '/admin', // Review buddy applications (admins only)
 } as const

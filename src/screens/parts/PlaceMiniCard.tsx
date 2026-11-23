@@ -3,6 +3,7 @@ import { CrowdBadge, PlaceImage } from '../../components'
 import type { Place } from '../../state/types'
 import { ROUTES } from '../../routes'
 import { crowdDetail, ratingDistance } from './placeText'
+import { usePlaceCrowd } from './usePlaceCrowd'
 
 interface PlaceMiniCardProps {
   place: Place
@@ -10,6 +11,7 @@ interface PlaceMiniCardProps {
 
 /** 160px photo card for the Home "Rekomendasi untukmu" carousel. */
 export function PlaceMiniCard({ place }: PlaceMiniCardProps) {
+  const crowd = usePlaceCrowd(place)
   return (
     <Link
       to={ROUTES.place(place.id)}
@@ -19,7 +21,7 @@ export function PlaceMiniCard({ place }: PlaceMiniCardProps) {
       <div className="p-2.5">
         <p className="truncate text-[15px] leading-[18px] font-bold text-ink">{place.name}</p>
         <p className="mt-1 text-[12px] leading-[15px] text-muted">{ratingDistance(place)}</p>
-        <CrowdBadge level={place.crowd} detail={crowdDetail(place)} className="mt-1.5" />
+        <CrowdBadge level={crowd.level} detail={crowdDetail(crowd)} className="mt-1.5" />
       </div>
     </Link>
   )

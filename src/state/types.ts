@@ -5,7 +5,8 @@ export type Campus = 'Anggrek' | 'Syahdan' | 'Kijang' | 'Binus Square'
 export const CAMPUSES: readonly Campus[] = ['Anggrek', 'Syahdan', 'Kijang', 'Binus Square']
 
 export type Category = 'Kopi' | 'Kantin' | 'Minuman' | 'Snack'
-export type CrowdLevel = 'Rendah' | 'Sedang' | 'Tinggi'
+/** Shown as Sepi / Sedang / Ramai / Penuh. */
+export type CrowdLevel = 'Rendah' | 'Sedang' | 'Tinggi' | 'Penuh'
 
 export interface MenuItem {
   id: string
@@ -15,7 +16,7 @@ export interface MenuItem {
 
 export interface HourlyCrowd {
   hour: number // 7..21
-  level: number // 0..1, relative crowd for the bar chart
+  level: number // busiest share of capacity in that hour (1 = full)
 }
 
 export interface Place {
@@ -29,18 +30,13 @@ export interface Place {
   distanceM: number
   priceMin: number
   priceMax: number
-  openHours: string // '07.00–22.00'
-  isOpen: boolean
+  openHours: string // '07.00–22.00'; open or closed is decided from this and the clock
   image: string // public path, e.g. '/images/places/kopi-tepi.webp'
   facilities: string[] // list line: ['Wi‑Fi', 'Colokan', 'Area nugas']
   tags: string[] // detail chips: ['Take away', 'Dekat Anggrek', 'Indoor', 'Wi‑Fi']
-  waitMin: number // AI estimated wait now (minutes)
-  waitRange: string // '2–3 mnt'
-  queueCount: number // people in queue now
-  crowd: CrowdLevel
-  hourly: HourlyCrowd[]
-  nowHour: number // which hour in `hourly` is "sekarang"
-  bestTime: string // 'Waktu terbaik datang: 07.00–10.00 atau setelah 20.00'
+  // Only used to seed a virtual queue ticket (Antrean Saya); never shown as a prediction.
+  waitMin: number
+  queueCount: number
   promo?: string // shown ONLY inside a banner labeled "Promosi"
   menu: MenuItem[]
 }

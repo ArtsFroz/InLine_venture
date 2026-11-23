@@ -28,12 +28,14 @@ const BAR_CLASS: Record<CrowdLevel, string> = {
   Rendah: 'bg-bar-low',
   Sedang: 'bg-bar-mid',
   Tinggi: 'bg-bar-high',
+  Penuh: 'bg-danger-dark',
 }
 
 const LEVEL_WORD: Record<CrowdLevel, string> = {
   Rendah: 'sepi',
   Sedang: 'sedang',
   Tinggi: 'ramai',
+  Penuh: 'penuh',
 }
 
 function hh(hour: number): string {
@@ -49,7 +51,7 @@ function candidateLabels(data: HourlyCrowd[], nowIndex: number, peak: number): A
   const last = data.length - 1
   const list: AxisLabel[] = []
   if (nowIndex >= 0) list.push({ index: nowIndex, text: 'sekarang', priority: 0 })
-  if (peak !== nowIndex) list.push({ index: peak, text: `${hh(data[peak].hour)} (ramai)`, priority: 1 })
+  if (peak !== nowIndex) list.push({ index: peak, text: `${hh(data[peak].hour)} (puncak)`, priority: 1 })
   list.push({ index: 0, text: hh(data[0].hour), priority: 2 })
   list.push({ index: last, text: hh(data[last].hour), priority: 3 })
   for (const hour of [10, 18]) {
@@ -112,6 +114,7 @@ export function QueueChart({ data, nowHour, height = 70, className }: QueueChart
 
   const nowIndex = data.findIndex((d) => d.hour === nowHour)
   const peak = data.length > 0 ? peakIndex(data) : -1
+  const scale = Math.max(1, ...data.map((d) => d.level))
 
   const labels = useMemo(
     () => (data.length > 0 ? placeLabels(candidateLabels(data, nowIndex, peak), data.length, width) : []),
@@ -131,7 +134,7 @@ export function QueueChart({ data, nowHour, height = 70, className }: QueueChart
       <div aria-hidden className="flex items-end" style={{ height, gap: BAR_GAP }}>
         {data.map((d, i) => {
           const isNow = i === nowIndex
-          const ratio = Math.min(1, Math.max(MIN_BAR_RATIO, d.level))
+          const ratio = Math.min(1, Math.max(MIN_BAR_RATIO, d.level / scale))
           return (
             <div
               key={d.hour}

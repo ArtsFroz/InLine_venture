@@ -1,0 +1,93 @@
+rules_version = '2';
+
+// InLine Firestore rules. Paste into Firebase console → Firestore → Rules (or `firebase deploy --only firestore:rules`).
+// - buddyApplications/{uid}: one buddy application per account. The applicant submits it as "pending";
+//   only an admin can approve or reject it, and the KTM/selfie photos must be wiped in that same write.
+// - admins/{uid}: created by hand in the console. Nobody can write it from the app.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Email/password accounts must have clicked the verification link; Google/Microsoft emails are verified by the provider.
+    function emailVerified() {
+      return request.auth.token.email_verified == true
+        || request.auth.token.firebase.sign_in_provider in ['google.com', 'microsoft.com'];
+    }
+
+    function microsoftLinked() {
+      return 'microsoft.com' in request.auth.token.firebase.identities;
+    }
+
+    // Size cap + JPEG data-URL prefix (split instead of a regex over the whole ~380k-character string).
+    function validImage(v) {
+      return v is string && v.size() > 1000 && v.size() < 400000
+        && v.split(',').size() == 2 && v.split(',')[0] == 'data:image/jpeg;base64';
+    }
+
+    function validApplication(d, uid) {
+      return d.keys().hasOnly(['uid', 'name', 'email', 'nim', 'campus', 'whatsapp', 'binusEmail', 'microsoftLinked',
+                               'ktmImage', 'selfieImage', 'consent', 'status', 'note', 'submittedAt', 'reviewedAt', 'reviewedBy'])
+        && d.keys().hasAll(['uid', 'name', 'email', 'nim', 'campus', 'whatsapp', 'binusEmail', 'microsoftLinked',
+                            'ktmImage', 'selfieImage', 'consent', 'status', 'note', 'submittedAt', 'reviewedAt', 'reviewedBy'])
+        && d.uid == uid
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 60
+        && d.email is string && d.email.size() <= 120
+        && d.nim is string && d.nim.matches('^[0-9]{10}$')
+        && d.campus in ['Anggrek', 'Syahdan', 'Kijang', 'Binus Square']
+        && d.whatsapp is string && d.whatsapp.matches('^628[0-9]{7,11}$')
+        && d.microsoftLinked == microsoftLinked()
+        && (d.binusEmail == null || (d.microsoftLinked == true && d.binusEmail is string
+                                     && d.binusEmail.matches('^[^@ ]+@binus[.]ac[.]id$')))
+        && validImage(d.ktmImage) && validImage(d.selfieImage)
+        && d.consent == true
+        && d.status == 'pending'
+        && d.note == null && d.reviewedAt == null && d.reviewedBy == null
+        && d.submittedAt == request.time;
+    }
+
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /buddyApplications/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+
+      allow create: if signedIn() && request.auth.uid == uid && emailVerified()
+        && validApplication(request.resource.data, uid);
+
+      // Resubmitting after a rejection.
+      allow update: if signedIn() && request.auth.uid == uid && emailVerified()
+        && resource.data.status == 'rejected'
+        && validApplication(request.resource.data, uid);
+
+      // Review: only the decision fields change, the photos are removed, and the reviewer is recorded.
+      allow update: if isAdmin()
+        && request.auth.uid != uid
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'note', 'reviewedAt', 'reviewedBy', 'ktmImage', 'selfieImage'])
+        && request.resource.data.status in ['verified', 'rejected']
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.ktmImage == null
+        && request.resource.data.selfieImage == null
+        && (request.resource.data.note == null
+            || (request.resource.data.note is string && request.resource.data.note.size() <= 200));
+
+      // The applicant can withdraw while not yet verified; an admin can remove any application (e.g. revoke a buddy).
+      allow delete: if (signedIn() && request.auth.uid == uid && resource.data.status != 'verified') || isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -4,9 +4,11 @@ import { ArrowUpDown, Sparkles } from 'lucide-react'
 import { InfoNote, Screen } from '../components'
 import {
   SORT_LABELS,
+  applyFilters,
   buildResultsSearch,
   describeParsed,
-  resolveResultsSearch,
+  parseQuery,
+  readResultsSearch,
   searchPlaces,
   type ResultsSearchInput,
 } from '../lib/aiSearch'
@@ -15,6 +17,7 @@ import { ResultCard, ResultCardSkeleton } from './results/ResultCard'
 import { FilterSheet, SortSheet } from './results/ResultsSheets'
 import { SearchBar } from './results/SearchBar'
 import { useFakeAnalysis } from './results/useFakeAnalysis'
+import { useAiQuery } from './results/useAiQuery'
 
 const SKELETON_COUNT = 3
 
@@ -22,11 +25,19 @@ const SKELETON_COUNT = 3
 export function ResultsScreen() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { q, filters, category, sort, parsed } = useMemo(() => resolveResultsSearch(params), [params])
+  const { q, filters, category, sort } = useMemo(() => readResultsSearch(params), [params])
+  const ai = useAiQuery(q)
+  const usedAi = ai.parsed !== null
+  const parsed = useMemo(
+    () => applyFilters(ai.parsed ?? parseQuery(q), filters, category),
+    [ai.parsed, q, filters, category],
+  )
   const { results, relaxed, dropped } = useMemo(() => searchPlaces(parsed, sort), [parsed, sort])
 
-  const analysisKey = `${q}|${filters.join(',')}|${category ?? ''}`
-  const analyzing = useFakeAnalysis(analysisKey, analysisKey !== '||')
+  // Chips-only searches have no sentence for the AI; keep the short "menganalisis" beat for them.
+  const chipKey = `|${filters.join(',')}|${category ?? ''}`
+  const chipAnalyzing = useFakeAnalysis(chipKey, !q.trim() && chipKey !== '||')
+  const analyzing = ai.loading || chipAnalyzing
 
   const [filterOpen, setFilterOpen] = useState(false)
   const [filterSession, setFilterSession] = useState(0)
@@ -64,7 +75,8 @@ export function ResultsScreen() {
           </>
         ) : (
           <span className="animate-screen-in">
-            <span className="font-extrabold">AI memahami:</span> {describeParsed(parsed)}
+            <span className="font-extrabold">{usedAi ? 'AI memahami:' : q.trim() ? 'Pencarian kata kunci:' : 'Filter:'}</span>{' '}
+            {describeParsed(parsed)}
           </span>
         )}
       </p>
@@ -103,7 +115,7 @@ export function ResultsScreen() {
       </ul>
 
       <p className="mt-3.5 text-[12px] leading-[15px] text-muted">
-        Label keramaian dihitung AI dari data antrean real-time &amp; pola historis.
+        Label keramaian adalah perkiraan dari jadwal sesi kelas BINUS (jeda kelas, jam makan siang, jam kosong).
       </p>
 
       <FilterSheet

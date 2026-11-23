@@ -9,6 +9,7 @@ import { formatRupiah } from '../lib/format'
 import { ROUTES } from '../routes'
 import { DeliverToCard } from './order/DeliverToCard'
 import { opensAt } from './parts/placeText'
+import { usePlaceCrowd } from './parts/usePlaceCrowd'
 import { LABEL_CLASS, NotFoundScreen } from './parts/ui'
 
 /** Figma (Kopi Tepi): the first two menu items start at 1, the rest at 0. */
@@ -35,6 +36,7 @@ function TitipForm({ place }: { place: Place }) {
   const [campus, setCampus] = useState<Campus>(place.campus)
   const [spot, setSpot] = useState(() => defaultSpot(place.campus))
   const [spotEdited, setSpotEdited] = useState(false)
+  const { closed } = usePlaceCrowd(place)
 
   const items = useMemo<OrderLine[]>(
     () =>
@@ -44,7 +46,7 @@ function TitipForm({ place }: { place: Place }) {
     [place.menu, quantities],
   )
   const { fees, total } = buildFees('titip', items)
-  const canOrder = place.isOpen && items.length > 0 && spot.trim().length > 0
+  const canOrder = !closed && items.length > 0 && spot.trim().length > 0
 
   const changeCampus = (next: Campus) => {
     setCampus(next)
@@ -75,7 +77,7 @@ function TitipForm({ place }: { place: Place }) {
       <Card padding="none" className="p-3.5">
         <p className={LABEL_CLASS}>Beli dari</p>
         <p className="mt-2 text-[16px] leading-[19px] font-bold text-ink">
-          {place.name} · estimasi antre ±{place.waitMin} mnt
+          {place.name}
         </p>
       </Card>
 
@@ -103,7 +105,7 @@ function TitipForm({ place }: { place: Place }) {
         <DeliverToCard campus={campus} spot={spot} onCampusChange={changeCampus} onSpotChange={changeSpot} />
       </div>
 
-      {!place.isOpen && (
+      {closed && (
         <InfoNote tone="amber" className="mt-3.5">
           {place.name} sedang tutup. Titip beli bisa dipesan mulai {opensAt(place)}.
         </InfoNote>

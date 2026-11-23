@@ -3,6 +3,8 @@
 import { PLACES } from '../data/places'
 import type { Campus, Category, CrowdLevel, Place } from '../state/types'
 import { formatRupiah } from './format'
+import { getNow } from './clock'
+import { placeCrowd, type PlaceCrowd } from './crowdModel'
 
 export interface ParsedQuery {
   category?: Category
@@ -29,7 +31,7 @@ export const DEFAULT_SORT: SortKey = 'sepi'
 export type FilterKey = 'antre-singkat' | 'buka-sekarang' | 'budget' | 'sepi' | 'terdekat'
 export const FILTER_KEYS: readonly FilterKey[] = ['antre-singkat', 'buka-sekarang', 'budget', 'sepi', 'terdekat']
 export const FILTER_LABELS: Readonly<Record<FilterKey, string>> = {
-  'antre-singkat': 'Antre singkat',
+  'antre-singkat': 'Tidak ramai',
   'buka-sekarang': 'Buka sekarang',
   budget: 'Budget',
   sepi: 'Sepi',
@@ -40,8 +42,6 @@ export const CATEGORIES: readonly Category[] = ['Kopi', 'Kantin', 'Minuman', 'Sn
 
 /** "Budget" filter chip = ≤ Rp25.000. */
 export const BUDGET_FILTER_MAX = 25000
-/** "Antre singkat" = AI wait estimate ≤ 5 minutes. */
-export const SHORT_QUEUE_MAX_MIN = 5
 /** "Terdekat" = within 700 m. */
 export const NEAREST_MAX_M = 700
 
@@ -103,7 +103,7 @@ const MENU_TERMS: readonly string[] = [
 const SHORT_QUEUE_RE =
   /\b(antre(an)? (yang )?(singkat|cepat|pendek|sebentar|dikit|sedikit)|(ga|gak|nggak|ngga|enggak|tidak|tanpa|anti|no) (ng)?antre|cepat|cepet|buru-buru|buru2|gercep|singkat)\b/
 const QUIET_RE = /\b(sepi|tenang|sunyi|kalem|(ga|gak|nggak|ngga|tidak) (rame|ramai))\b/
-const OPEN_NOW_RE = /\b(buka|open|lagi buka|masih buka)\b/
+const OPEN_NOW_RE = /\b(buka|open|lagi buka|masih buka|(tidak|ga|gak|nggak|ngga|enggak|belum) tutup)\b/
 const NEAREST_RE = /\b(terdekat|paling dekat|paling deket|nearby)\b/
 const NEAR_RE = /\b(dekat|deket)\b/
 const CHEAP_RE = /\b(murah|hemat|irit|kantong mahasiswa)\b/
@@ -196,7 +196,7 @@ export function describeParsed(parsed: ParsedQuery): string {
   if (parsed.maxBudget !== undefined) parts.push(`budget ≤ ${formatRupiah(parsed.maxBudget)}`)
   if (parsed.campus) parts.push(`dekat ${parsed.campus}`)
   else if (parsed.nearest) parts.push('terdekat')
-  if (parsed.shortQueue) parts.push('antre singkat')
+  if (parsed.shortQueue) parts.push('tidak ramai')
   if (parsed.quiet) parts.push('suasana sepi')
   if (parsed.openNow) parts.push('buka sekarang')
   for (const facility of parsed.facilities) parts.push(FACILITY_PHRASES[facility] ?? facility.toLowerCase())
@@ -212,7 +212,13 @@ const RELAX_ORDER: readonly Constraint[] = [
   'maxBudget', 'campus', 'shortQueue', 'nearest', 'quiet', 'openNow', 'facilities', 'category',
 ]
 
-const CROWD_RANK: Readonly<Record<CrowdLevel, number>> = { Rendah: 0, Sedang: 1, Tinggi: 2 }
+const CROWD_RANK: Readonly<Record<CrowdLevel, number>> = { Rendah: 0, Sedang: 1, Tinggi: 2, Penuh: 3 }
+
+/** Crowd estimate at the current prediction time (class-schedule model). */
+function crowdOf(place: Place): PlaceCrowd {
+  const now = getNow()
+  return placeCrowd(place, now.day, now.minute)
+}
 
 function hasFacility(place: Place, facility: string): boolean {
   const accepted = FACILITY_ALIASES[facility] ?? [facility]
@@ -228,13 +234,13 @@ function satisfies(place: Place, parsed: ParsedQuery, constraint: Constraint): b
     case 'maxBudget':
       return parsed.maxBudget === undefined || place.priceMin <= parsed.maxBudget
     case 'shortQueue':
-      return !parsed.shortQueue || place.waitMin <= SHORT_QUEUE_MAX_MIN
+      return !parsed.shortQueue || CROWD_RANK[crowdOf(place).level] <= CROWD_RANK.Sedang
     case 'nearest':
       return !parsed.nearest || place.distanceM <= NEAREST_MAX_M
     case 'quiet':
-      return !parsed.quiet || place.crowd === 'Rendah'
+      return !parsed.quiet || crowdOf(place).level === 'Rendah'
     case 'openNow':
-      return !parsed.openNow || place.isOpen
+      return !parsed.openNow || !crowdOf(place).closed
     case 'facilities':
       return parsed.facilities.every((facility) => hasFacility(place, facility))
   }
@@ -251,7 +257,7 @@ function relevance(place: Place, parsed: ParsedQuery): number {
 function primaryCompare(a: Place, b: Place, sort: SortKey): number {
   switch (sort) {
     case 'sepi':
-      return CROWD_RANK[a.crowd] - CROWD_RANK[b.crowd]
+      return CROWD_RANK[crowdOf(a).level] - CROWD_RANK[crowdOf(b).level]
     case 'terdekat':
       return a.distanceM - b.distanceM
     case 'rating':
@@ -266,10 +272,10 @@ function rank(places: readonly Place[], parsed: ParsedQuery, sort: SortKey): Pla
   return scored
     .sort(
       (a, b) =>
-        Number(b.place.isOpen) - Number(a.place.isOpen) || // closed places always last
+        Number(crowdOf(a.place).closed) - Number(crowdOf(b.place).closed) || // closed places always last
         primaryCompare(a.place, b.place, sort) ||
         b.score - a.score ||
-        a.place.waitMin - b.place.waitMin ||
+        crowdOf(a.place).share - crowdOf(b.place).share ||
         a.place.distanceM - b.place.distanceM,
     )
     .map(({ place }) => place)
@@ -286,7 +292,7 @@ export interface SearchResult {
 const CONSTRAINT_LABELS: Readonly<Record<Constraint, string>> = {
   maxBudget: 'budget',
   campus: 'kampus',
-  shortQueue: 'antre singkat',
+  shortQueue: 'tidak ramai',
   nearest: 'jarak',
   quiet: 'sepi',
   openNow: 'buka sekarang',
@@ -376,8 +382,3 @@ export function readResultsSearch(params: URLSearchParams): ResultsSearchState {
   return state
 }
 
-/** Convenience for the Results screen: URL → parsed query with chips merged in. */
-export function resolveResultsSearch(params: URLSearchParams): ResultsSearchState & { parsed: ParsedQuery } {
-  const state = readResultsSearch(params)
-  return { ...state, parsed: applyFilters(parseQuery(state.q), state.filters, state.category) }
-}

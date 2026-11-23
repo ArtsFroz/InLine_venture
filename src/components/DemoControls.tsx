@@ -11,7 +11,17 @@ import { getPlace } from '../data/places'
 import { buildResultsSearch } from '../lib/aiSearch'
 import { ROUTES } from '../routes'
 import { useAppState } from '../state/AppState'
+import { DAY_NAMES, hhmm, setDemoClock, useNow, type DayIndex } from '../lib/clock'
 import type { OrderLine, OrderType } from '../state/types'
+
+/** Demo times for the crowd prediction (presentations often happen outside class hours). */
+const TIME_PRESETS: readonly { label: string; day: DayIndex; minute: number }[] = [
+  { label: 'Sel 10.35 · jelang jeda', day: 2, minute: 635 },
+  { label: 'Sel 12.55 · puncak', day: 2, minute: 775 },
+  { label: 'Sel 14.30 · lebih lega', day: 2, minute: 870 },
+  { label: 'Jum 12.10 · Jumatan', day: 5, minute: 730 },
+  { label: 'Sab 12.30 · sepi', day: 6, minute: 750 },
+]
 
 const DEMO_PLACE_ID = 'kopi-tepi'
 const SAMPLE_QUERY = 'Kopi susu dekat Anggrek, antre singkat, budget 25 ribu.'
@@ -46,6 +56,7 @@ export function DemoControls() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const { state, actions } = useAppState()
+  const now = useNow()
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
 
@@ -196,6 +207,30 @@ export function DemoControls() {
         <Button variant="danger" size="sm" fullWidth icon={<RotateCcw size={17} />} onClick={reset}>
           Reset demo
         </Button>
+
+        <SectionTitle>Waktu prediksi keramaian</SectionTitle>
+        <p className="mb-2 text-[12px] text-muted">
+          Sekarang: {DAY_NAMES[now.day]} {hhmm(now.minute)} {now.simulated ? '(simulasi)' : '(jam asli)'}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {TIME_PRESETS.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => safely(() => setDemoClock({ day: preset.day, minute: preset.minute }), false)}
+              className="min-h-11 rounded-[12px] border border-line bg-surface px-2.5 py-2 text-left text-[13px] font-semibold transition-colors duration-150 hover:bg-primary-light active:scale-[0.98] focus-visible:ring-[3px] focus-visible:ring-primary/45 focus-visible:outline-none"
+            >
+              {preset.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => safely(() => setDemoClock(null), false)}
+            className="min-h-11 rounded-[12px] border border-line bg-surface px-2.5 py-2 text-left text-[13px] font-semibold transition-colors duration-150 hover:bg-primary-light active:scale-[0.98] focus-visible:ring-[3px] focus-visible:ring-primary/45 focus-visible:outline-none"
+          >
+            Pakai jam asli
+          </button>
+        </div>
 
         <SectionTitle>Pelacakan pesanan</SectionTitle>
         <div className="flex items-center justify-between gap-3 rounded-tile bg-soft px-3.5 py-3">

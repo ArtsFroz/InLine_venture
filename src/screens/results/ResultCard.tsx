@@ -3,13 +3,15 @@ import type { Place } from '../../state/types'
 import { formatDistance, formatPriceRange } from '../../lib/format'
 import { ROUTES } from '../../routes'
 import { opensAt } from '../parts/placeText'
+import { usePlaceCrowd } from '../parts/usePlaceCrowd'
 
 interface ResultCardProps {
   place: Place
 }
 
-/** Hasil AI list card: square photo, name, meta, facilities, crowd + wait pills (02-hasil-ai). */
+/** Hasil AI list card: square photo, name, meta, facilities, crowd pill (02-hasil-ai). */
 export function ResultCard({ place }: ResultCardProps) {
+  const crowd = usePlaceCrowd(place)
   const meta = `${place.rating.toFixed(1)} (${place.reviews}) · ${formatDistance(place.distanceM)} · ${formatPriceRange(place.priceMin, place.priceMax)}`
   return (
     <Card to={ROUTES.place(place.id)} padding="none" className="p-2.5">
@@ -22,8 +24,7 @@ export function ResultCard({ place }: ResultCardProps) {
           <span className="mt-1 truncate text-[12.5px] leading-[15px] text-muted">{meta}</span>
           <span className="mt-1 truncate text-[12.5px] leading-[15px] text-muted">{place.facilities.join(' · ')}</span>
           <span className="mt-1.5 flex flex-wrap gap-1.5">
-            <CrowdBadge level={place.crowd} />
-            <Tag tone="gray">{place.isOpen ? `Antre ${place.waitRange}` : `Tutup · buka ${opensAt(place)}`}</Tag>
+            {crowd.closed ? <Tag tone="gray">Tutup · buka {opensAt(place)}</Tag> : <CrowdBadge level={crowd.level} />}
           </span>
         </span>
       </span>

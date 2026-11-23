@@ -7,6 +7,7 @@ import type { Place } from '../state/types'
 import { ROUTES } from '../routes'
 import { crowdDetail, ratingDistance } from './parts/placeText'
 import { EmptyState } from './parts/ui'
+import { usePlaceCrowd } from './parts/usePlaceCrowd'
 
 interface SavedCardProps {
   place: Place
@@ -15,6 +16,7 @@ interface SavedCardProps {
 
 /** Saved place row: the left part opens the detail, the red heart unsaves (09-disimpan). */
 function SavedCard({ place, onUnsave }: SavedCardProps) {
+  const crowd = usePlaceCrowd(place)
   return (
     <Card padding="none" className="flex items-center">
       <Link
@@ -23,7 +25,7 @@ function SavedCard({ place, onUnsave }: SavedCardProps) {
       >
         <span className="block truncate text-[16px] leading-[19px] font-bold text-ink">{place.name}</span>
         <span className="mt-0.5 block text-[12.5px] leading-[15px] text-muted">{ratingDistance(place)}</span>
-        <CrowdBadge level={place.crowd} detail={crowdDetail(place)} className="mt-1.5" />
+        <CrowdBadge level={crowd.level} detail={crowdDetail(crowd)} className="mt-1.5" />
       </Link>
       <IconButton
         tone="ghost"

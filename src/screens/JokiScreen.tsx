@@ -8,6 +8,7 @@ import type { Place } from '../state/types'
 import { ROUTES } from '../routes'
 import { ModeOption } from './order/ModeOption'
 import { opensAt } from './parts/placeText'
+import { usePlaceCrowd } from './parts/usePlaceCrowd'
 import { INPUT_CLASS, LABEL_CLASS, NotFoundScreen } from './parts/ui'
 
 const JOKI_FEES = buildFees('joki')
@@ -33,7 +34,8 @@ function JokiForm({ place }: { place: Place }) {
   const inputId = useId()
 
   const queueHere = state.activeQueue?.placeId === place.id ? state.activeQueue : null
-  const canOrder = place.isOpen && meetingPoint.trim().length > 0
+  const { closed } = usePlaceCrowd(place)
+  const canOrder = !closed && meetingPoint.trim().length > 0
 
   const order = () => {
     if (!canOrder) return
@@ -96,7 +98,7 @@ function JokiForm({ place }: { place: Place }) {
         )}
       </Card>
 
-      {place.isOpen ? (
+      {!closed ? (
         <InfoNote className="mt-3.5">Buddy terverifikasi NIM akan dicarikan otomatis setelah kamu pesan.</InfoNote>
       ) : (
         <InfoNote tone="amber" className="mt-3.5">

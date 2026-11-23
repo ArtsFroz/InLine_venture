@@ -64,6 +64,44 @@ Other scripts:
 On a laptop the app is shown centered inside a phone-sized frame (390×844), scaled down automatically if the
 window is short. On a phone it fills the screen.
 
+## v1.1: login, AI search, schedule-based crowd
+
+- **Crowd** (`src/lib/crowdModel.ts`): no wait-time or queue numbers any more. Each place's crowd level
+  (Sepi / Sedang / Ramai / Penuh) is estimated from the BINUS class schedule: spikes at every 20-minute break,
+  the lunch peak (11.00–14.00), students with a free session waiting between classes, quiet afternoons,
+  busier Tue–Thu, the Friday-prayer dip, quiet Saturdays. All constants are assumptions until field observation.
+  Demo controls (Shift+D) can set a demo day/time so the pattern can be shown outside class hours.
+- **AI search** (`netlify/functions/ai-search.ts`): the Results screen sends the sentence (and nothing else) to
+  `/api/ai-search`, which asks Google Gemini (free tier, `gemini-3.5-flash-lite`) to turn it into filters. Without
+  the function (local preview), past the free-tier rate limit, or on any error the app falls back to the keyword
+  parser and labels it "Pencarian kata kunci".
+- **AI chat** (`/chat`, from the Home AI card): each message also sends the time and the app's own table of
+  places (status, crowd, prices, menu; no user data). Gemini answers with filters, up to 3 picked places, a short
+  reply about them, follow-up chips, or one question back when the message is too vague. The function drops any
+  reply that names a place it did not pick or quotes a price not in the table (`netlify/lib/grounding.ts`), and
+  the app then shows its own summary instead. The prompt lives in `netlify/lib/prompt.ts`.
+- **Login / signup** (`src/state/Auth.tsx`): Firebase Authentication with Google, Microsoft (campus account), or
+  email + password with an email verification link, plus password reset. Until Firebase is configured the login
+  screen only offers "Masuk mode demo".
+- **Buddy verification** (`src/screens/BuddyApplyScreen.tsx`, `src/screens/AdminReviewScreen.tsx`): any account can
+  apply from Profil with NIM (format check only), KTM photo and a selfie holding the KTM, optionally linking the
+  BINUS Microsoft account. Admins (`admins/{uid}` in Firestore) approve or reject at `/admin`; photos are deleted on
+  review. Mode Buddy opens only for approved buddies. Rules: `firestore.rules`. Full setup: **docs/SETUP-LOGIN.md**.
+
+Setup (copy `.env.example` to `.env.local` for local use, and add the same variables in Netlify →
+Site configuration → Environment variables):
+
+1. **Firebase:** create a project at console.firebase.google.com → Authentication → Sign-in method → enable
+   **Google** and **Email/Password** → Settings → Authorized domains → add `inlineventure.netlify.app` →
+   Project settings → add a Web app and copy `apiKey`, `authDomain`, `projectId`, `appId` into the
+   `VITE_FIREBASE_*` variables.
+2. **AI (free):** create an API key at aistudio.google.com → Get API key (no billing needed) and put it in
+   `GEMINI_API_KEY` (Netlify only, never a `VITE_` variable). The free tier has rate limits, and Google may use
+   free-tier prompts to improve its products, so only the search sentence is sent. `INLINE_AI_MODEL` can
+   override the default `gemini-3.5-flash-lite`.
+3. Deploy from GitHub (not Netlify Drop) so the function is built; the `VITE_*` values are read at build time,
+   so redeploy after changing them.
+
 ## Publishing online (Netlify)
 
 Live demo: <https://inlineventure.netlify.app>

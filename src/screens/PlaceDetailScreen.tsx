@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft, Heart, Navigation } from 'lucide-react'
+import { ChevronLeft, Heart } from 'lucide-react'
 import { Button, IconButton, PlaceImage, PromoBanner, Screen, Tag, showToast } from '../components'
 import { useAppState, usePlace } from '../state/AppState'
 import type { Place } from '../state/types'
@@ -10,15 +10,18 @@ import { QueuePredictionCard } from './detail/QueuePredictionCard'
 import { NotFoundScreen } from './parts/ui'
 import { useGoBack } from './parts/useGoBack'
 import { opensAt } from './parts/placeText'
+import { usePlaceCrowd } from './parts/usePlaceCrowd'
+import { useNow } from '../lib/clock'
+import { isOpenAt } from '../lib/crowdModel'
 
 interface DetailFooterProps {
   place: Place
 }
 
-/** Pinned CTA bar: Joki (primary) + route icon, Titip (outline). Disabled while the place is closed. */
+/** Pinned CTA bar: Joki (primary), Titip (outline). Disabled while the place is closed. */
 function DetailFooter({ place }: DetailFooterProps) {
   const navigate = useNavigate()
-  const closed = !place.isOpen
+  const { closed } = usePlaceCrowd(place)
   return (
     <div className="flex flex-col gap-2">
       {closed && (
@@ -26,17 +29,9 @@ function DetailFooter({ place }: DetailFooterProps) {
           {place.name} sedang tutup. Joki &amp; titip bisa dipesan mulai {opensAt(place)}.
         </p>
       )}
-      <div className="flex gap-2">
-        <Button fullWidth className="flex-1" disabled={closed} onClick={() => navigate(ROUTES.joki(place.id))}>
-          Pakai Joki Antre
-        </Button>
-        <IconButton
-          size={48}
-          icon={<Navigation size={20} strokeWidth={2} aria-hidden />}
-          label={`Rute ke ${place.name}`}
-          onClick={() => showToast(`Rute ke ${place.name} dibuka (demo)`)}
-        />
-      </div>
+      <Button fullWidth disabled={closed} onClick={() => navigate(ROUTES.joki(place.id))}>
+        Pakai Joki Antre
+      </Button>
       <Button variant="outline" size="sm" fullWidth disabled={closed} onClick={() => navigate(ROUTES.titip(place.id))}>
         Titip Beli &amp; Antar ke Kelas
       </Button>
@@ -50,6 +45,7 @@ export function PlaceDetailScreen() {
   const place = usePlace(id)
   const { state, actions } = useAppState()
   const goBack = useGoBack()
+  const now = useNow()
 
   if (!place) {
     return <NotFoundScreen title="Tempat tidak ditemukan" message="Tempat ini tidak ada di data demo. Coba cari lagi dari Home." />
@@ -88,7 +84,7 @@ export function PlaceDetailScreen() {
       <div className="px-5 pt-[18px]">
         <h1 className="text-[24px] leading-[28px] font-extrabold tracking-[-0.015em] text-ink">{place.name}</h1>
         <p className="mt-2.5 text-[13.5px] leading-4 text-muted">{meta}</p>
-        {place.isOpen ? (
+        {isOpenAt(place, now.minute) ? (
           <p className="mt-2.5 text-[13.5px] leading-4 font-bold text-primary">Buka sekarang · {place.openHours}</p>
         ) : (
           <p className="mt-2.5 text-[13.5px] leading-4 font-semibold text-muted">Tutup · buka {opensAt(place)}</p>
