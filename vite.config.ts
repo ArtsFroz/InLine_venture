@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
         manifest: {
           name: 'InLine — Antre lebih cerdas di BINUS',
           short_name: 'InLine',
-          description: 'Demo prototype InLine: prediksi antrean AI, Joki Antre, dan Titip Beli & Antar di kampus BINUS.',
+          description: 'InLine: prediksi antrean AI, Joki Antre, dan Titip Beli & Antar di kampus BINUS.',
           lang: 'id',
           theme_color: '#15803D',
           background_color: '#F4F6F3',

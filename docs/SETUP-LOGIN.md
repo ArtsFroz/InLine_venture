@@ -31,6 +31,13 @@ Perkiraan waktu: 30–45 menit. Microsoft (langkah 5) bisa dilewati dulu.
 
 **Authentication → Templates → Email address verification** (opsional): ubah bahasa template ke Indonesia.
 
+**Google Cloud console → APIs & Services → Credentials → Web client (auto created by Google Service)** →
+**Authorized redirect URIs**, tambahkan alamat handler login di domain aplikasi sendiri, lalu **Save**:
+`https://inlineventure.netlify.app/__/auth/handler` dan `http://localhost:4173/__/auth/handler`
+(tambah `http://localhost:5173/__/auth/handler` kalau login dites lewat `npm run dev`). Halaman `/__/auth/*`
+diteruskan ke Firebase oleh `public/_redirects` (Netlify) dan `vite.config.ts` (lokal), supaya login lewat
+redirect tetap jalan di browser yang memblokir storage pihak ketiga (Safari, Chrome).
+
 ## 3. Buat Firestore dan pasang rules
 
 1. **Build → Firestore Database → Create database** → lokasi `asia-southeast2 (Jakarta)` → **Start in production mode**.
@@ -38,7 +45,9 @@ Perkiraan waktu: 30–45 menit. Microsoft (langkah 5) bisa dilewati dulu.
 
 ## 4. Isi environment variable
 
-**Netlify → Site configuration → Environment variables** (dan `.env.local` untuk lokal, lihat `.env.example`):
+Untuk website live, nilai `VITE_*` di bawah sudah ada di [`.env.production`](../.env.production) (publik, ikut
+ke browser). Untuk lokal, salin ke `.env.local` (lihat `.env.example`). Hanya `GEMINI_API_KEY` yang diisi di
+**Netlify → Project configuration → Environment variables**, karena kunci itu rahasia:
 
 | Nama | Isi |
 |---|---|
@@ -50,7 +59,8 @@ Perkiraan waktu: 30–45 menit. Microsoft (langkah 5) bisa dilewati dulu.
 | `VITE_MICROSOFT_LOGIN` | isi `off` kalau langkah 5 belum selesai atau gagal |
 | `GEMINI_API_KEY` | key AI (lihat README) |
 
-Lalu **Deploys → Trigger deploy → Deploy site**. Variabel `VITE_` dibaca saat build, jadi wajib deploy ulang.
+Netlify men-deploy otomatis setiap push ke `main`. Setelah mengubah env var di Netlify, jalankan **Deploys →
+Trigger deploy → Deploy site** (variabel dibaca saat build).
 
 ## 5. Login Microsoft kampus (opsional, coba dulu)
 
@@ -58,7 +68,8 @@ Lalu **Deploys → Trigger deploy → Deploy site**. Variabel `VITE_` dibaca saa
    **App registrations → New registration**.
    - Name: `InLine`
    - Supported account types: **Accounts in any organizational directory (Multitenant)**
-   - Redirect URI: **Web** → `https://<authDomain>/__/auth/handler` (mis. `https://inline-binus.firebaseapp.com/__/auth/handler`)
+   - Redirect URI: **Web** → `https://inlineventure.netlify.app/__/auth/handler` (aplikasi memakai domainnya
+     sendiri sebagai `authDomain`); tambahkan juga `http://localhost:4173/__/auth/handler` untuk tes lokal
 2. Salin **Application (client) ID**. Lalu **Certificates & secrets → New client secret** → salin **Value**-nya.
 3. Firebase → Authentication → Sign-in method → **Microsoft** → Enable → tempel Application ID dan secret → Save.
 4. **Tes dengan akun @binus.ac.id** di <https://inlineventure.netlify.app>:
