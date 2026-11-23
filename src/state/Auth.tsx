@@ -224,7 +224,8 @@ export function authErrorMessage(error: unknown): string {
     case 'auth/invalid-credential':
     case 'auth/wrong-password':
     case 'auth/user-not-found':
-      return 'Email atau password salah.'
+      // Firebase gives the same code for an account made with Google, which has no password.
+      return 'Email atau password salah. Kalau akunmu dibuat lewat Google, pakai tombol "Masuk dengan Google".'
     case 'auth/email-already-in-use':
       return 'Email ini sudah terdaftar. Silakan masuk.'
     case 'auth/weak-password':
