@@ -196,16 +196,16 @@ export function DemoControls() {
           </span>
           <div className="min-w-0 flex-1">
             <h2 id={titleId} className="text-[18px] leading-tight font-extrabold">
-              Demo controls
+              Kontrol presenter
             </h2>
             <p className="mt-0.5 text-[12px] text-muted">Hanya untuk presenter · Shift+D</p>
           </div>
-          <IconButton icon={<X size={20} aria-hidden />} label="Tutup demo controls" onClick={close} />
+          <IconButton icon={<X size={20} aria-hidden />} label="Tutup kontrol presenter" onClick={close} />
         </div>
 
-        <SectionTitle>Demo</SectionTitle>
+        <SectionTitle>Data</SectionTitle>
         <Button variant="danger" size="sm" fullWidth icon={<RotateCcw size={17} />} onClick={reset}>
-          Reset demo
+          Reset data
         </Button>
 
         <SectionTitle>Waktu prediksi keramaian</SectionTitle>
