@@ -20,23 +20,15 @@ import { isValidAppState } from './validate'
 
 // ——— Constants & seed ———
 
-const STORAGE_KEY = 'inline-demo-v1'
+const STORAGE_KEY = 'inline-state-v2'
 const FIRST_ORDER_NUMBER = 128 // first order is #QB-0128 (as in 7 · Lacak)
 const REQUEST_REFILL_MS = 5000
 /** Max 'baru' (incoming) requests shown at once; accepted ones don't count, so a 4th accept can be refused. */
 const MAX_NEW_REQUESTS = 2
 const MIN_PER_PERSON = 3
 
-const SEED_QUEUE: ActiveQueue = {
-  placeId: 'bicasa-coffee',
-  number: 'A028',
-  serving: 'A024',
-  ahead: 3,
-  etaMin: 12,
-  createdAt: '10:32',
-  servingAt: '10:45',
-  turnAt: '10:57',
-}
+/** Place used by the presenter controls' sample orders. */
+const DEMO_PLACE_ID = 'bicasa-coffee'
 
 const SEED_REQUESTS: readonly BuddyRequest[] = [
   {
@@ -76,7 +68,7 @@ const REQUEST_POOL: readonly RequestTemplate[] = [
 export function createSeedState(): AppState {
   return {
     savedPlaceIds: ['bicasa-coffee', 'bakmi-effata'],
-    activeQueue: { ...SEED_QUEUE },
+    activeQueue: null,
     orders: [],
     buddy: {
       online: false, // Profil shows "Aktifkan Mode Buddy" first, as in Figma
@@ -138,8 +130,6 @@ function queueNumber(letter: string, n: number): string {
 }
 
 function buildQueue(place: Place, now: Date): ActiveQueue {
-  // The seed place reproduces the Figma numbers (4 · Antrean Saya).
-  if (place.id === SEED_QUEUE.placeId) return { ...SEED_QUEUE }
   const letter = QUEUE_LETTER[place.category]
   const charSum = [...place.id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
   const serving = 10 + (charSum % 30)
@@ -198,15 +188,15 @@ function buildOrder(state: AppState, input: CreateOrderInput, id: string, create
 }
 
 function demoOrderInput(type: OrderType): CreateOrderInput {
-  if (type === 'joki') return { type, placeId: SEED_QUEUE.placeId, queueNumber: SEED_QUEUE.number, meetingPoint: DEFAULT_MEETING_POINT }
-  const place = getPlace(SEED_QUEUE.placeId)
+  if (type === 'joki') return { type, placeId: DEMO_PLACE_ID, meetingPoint: DEFAULT_MEETING_POINT }
+  const place = getPlace(DEMO_PLACE_ID)
   const pick = (name: string): OrderLine[] => {
     const item = place?.menu.find((m) => m.name === name)
     return item ? [{ menuId: item.id, name: item.name, price: item.price, qty: 1 }] : []
   }
   return {
     type,
-    placeId: SEED_QUEUE.placeId,
+    placeId: DEMO_PLACE_ID,
     items: [...pick('Kopi Susu BICASA'), ...pick('Caffe Latte')],
     deliverTo: { campus: 'Anggrek', detail: 'Lobby lt. 1' },
   }

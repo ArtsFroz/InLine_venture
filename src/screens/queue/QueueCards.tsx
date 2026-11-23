@@ -5,7 +5,7 @@ import { cx } from '../../lib/cx'
 
 /** Walking speed used for "jalan kaki ±N menit" (≈ 4.5 km/h). */
 const WALK_M_PER_MIN = 75
-/** Positions shown "behind" the user in the progress bar, so 3 ahead ≈ 2/3 done (as in Figma). */
+/** Positions shown "behind" the user in the progress bar, so 3 ahead ≈ 2/3 done. */
 const PROGRESS_TAIL = 6
 
 function walkMinutes(place: Place | undefined): number {
@@ -25,7 +25,7 @@ export function QueueSuccessBanner() {
       </span>
       <div className="min-w-0">
         <p className="text-[14.5px] leading-[18px] font-bold text-primary-dark">Antrean berhasil diambil</p>
-        <p className="mt-0.5 text-[12.5px] leading-[15px] text-primary-dark/85">Kami kabari saat giliranmu sudah dekat.</p>
+        <p className="mt-0.5 text-[12.5px] leading-[15px] text-primary-dark/85">Pantau giliranmu di halaman ini.</p>
       </div>
     </div>
   )
@@ -40,7 +40,7 @@ interface QueueNumberCardProps {
 export function QueueNumberCard({ queue, place }: QueueNumberCardProps) {
   const stats: ReadonlyArray<readonly [string, string]> = [
     ['Sedang dilayani', queue.serving],
-    ['Estimasi AI', `±${queue.etaMin} mnt`],
+    ['Estimasi', `±${queue.etaMin} mnt`],
     ['Di depanmu', `${queue.ahead} org`],
   ]
   return (
@@ -70,7 +70,7 @@ export function QueueNumberCard({ queue, place }: QueueNumberCardProps) {
         />
       </div>
       <p className="mt-3.5 text-[12.5px] leading-[15px] text-ink/80">
-        Saran AI: berangkat sekarang, jalan kaki ±{walkMinutes(place)} menit.
+        Saran: berangkat sekarang, jalan kaki ±{walkMinutes(place)} menit.
       </p>
     </Card>
   )

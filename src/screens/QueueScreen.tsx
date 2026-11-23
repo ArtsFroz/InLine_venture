@@ -9,9 +9,7 @@ import { CancelQueueSheet } from './queue/CancelQueueSheet'
 import { QueueNumberCard, QueueSuccessBanner, QueueTimelineCard } from './queue/QueueCards'
 import { EmptyState } from './parts/ui'
 
-const DEMO_QUEUE_PLACE_ID = 'bicasa-coffee'
-
-/** 4 · Antrean Saya (+ 4b cancel sheet; `?batal=1` opens it on load for the demo). */
+/** 4 · Antrean Saya (+ 4b cancel sheet; `?batal=1` opens it on load). */
 export function QueueScreen() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -40,12 +38,6 @@ export function QueueScreen() {
     showToast(number ? `Antrean ${number} dibatalkan` : 'Antrean dibatalkan')
   }
 
-  /** Lets the presenter recreate the Figma queue after the Joki flow cleared it. */
-  const takeDemoQueue = () => {
-    const taken = actions.takeQueue(DEMO_QUEUE_PLACE_ID)
-    if (taken) showToast(`Nomor antrean ${taken.number} diambil`)
-  }
-
   if (!queue) {
     return (
       <Screen nav>
@@ -54,14 +46,9 @@ export function QueueScreen() {
           icon={<Ticket size={28} strokeWidth={2} />}
           title="Belum ada antrean aktif"
           action={
-            <div className="flex flex-col gap-2.5">
-              <Button fullWidth onClick={() => navigate(ROUTES.results)}>
-                Cari tempat
-              </Button>
-              <Button variant="outline" fullWidth onClick={takeDemoQueue}>
-                Ambil antrean di BICASA Coffee
-              </Button>
-            </div>
+            <Button fullWidth onClick={() => navigate(ROUTES.results)}>
+              Cari tempat
+            </Button>
           }
         >
           Cari tempat yang sepi lewat AI Radar, lalu pakai Joki Antre supaya buddy yang mengantre untukmu.
